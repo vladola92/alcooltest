@@ -13,10 +13,6 @@ if (!firebase.apps.length) {
 }
 const db = firebase.firestore();
 
-/*
-  PROTECȚIE MINIMĂ.
-  Schimbă parola de mai jos cu una aleasă de tine.
-*/
 const ADMIN_PASSWORD = "alcooltest2026";
 
 let currentAdminEventId = null;
@@ -105,7 +101,7 @@ function createEvent() {
   })
   .catch((error) => {
     alert("Eroare la crearea evenimentului: " + error.message);
-    console.error(error);
+    console.error("createEvent error:", error);
     message.innerText = "";
   });
 }
@@ -146,6 +142,33 @@ function listenToEvents() {
     });
 }
 
+function selectEvent(eventId) {
+  currentAdminEventId = eventId;
+
+  db.collection("events").doc(eventId).get()
+    .then((doc) => {
+      if (!doc.exists) {
+        alert("Eveniment inexistent.");
+        return;
+      }
+
+      const data = doc.data();
+      currentGuestLink = getGuestLink(eventId);
+
+      document.getElementById("selectedEventName").innerText = data.name || "-";
+      document.getElementById("selectedEventCode").innerText = eventId;
+      document.getElementById("eventLinkBox").innerHTML =
+        `<a href="${currentGuestLink}" target="_blank">${currentGuestLink}</a>`;
+
+      renderQr(currentGuestLink);
+      listenToEntries(eventId);
+    })
+    .catch((error) => {
+      alert("Eroare la încărcarea evenimentului: " + error.message);
+      console.error("selectEvent error:", error);
+    });
+}
+
 function listenToEntries(eventId) {
   if (unsubscribeEntries) unsubscribeEntries();
 
@@ -182,7 +205,7 @@ function renderQr(text) {
   qrBox.innerHTML = "";
 
   new QRCode(qrBox, {
-    text,
+    text: text,
     width: 180,
     height: 180
   });
@@ -203,27 +226,6 @@ function copyGuestLink() {
     });
 }
 
-function listenToEntries(eventId) {
-  if (unsubscribeEntries) unsubscribeEntries();
-
-  unsubscribeEntries = db.collection("events")
-    .doc(eventId)
-    .collection("entries")
-    .orderBy("alcohol", "desc")
-    .orderBy("updatedAt", "asc")
-    .onSnapshot((snapshot) => {
-      const entries = [];
-      snapshot.forEach((doc) => {
-        entries.push({ id: doc.id, ...doc.data() });
-      });
-
-      renderAdminRanking(entries);
-    }, (error) => {
-      console.error("listenToEntries error:", error);
-      alert("Eroare la citirea clasamentului: " + error.message);
-    });
-}
-
 function renderAdminRanking(entries) {
   const podium = document.getElementById("adminPodium");
   const restList = document.getElementById("adminRestList");
@@ -233,17 +235,16 @@ function renderAdminRanking(entries) {
 
   if (!entries.length) {
     podium.innerHTML = '<div class="podium-empty">Nu există încă rezultate.</div>';
-    restList.innerHTML = "";
     return;
   }
 
   const top3 = entries.slice(0, 3);
   const rest = entries.slice(3);
-
   const podiumOrder = [1, 0, 2];
 
   podiumOrder.forEach((index) => {
     const item = top3[index];
+
     if (!item) {
       const empty = document.createElement("div");
       empty.className = "podium-card empty";
@@ -252,9 +253,8 @@ function renderAdminRanking(entries) {
       return;
     }
 
-    const places = ["🥇", "🥈", "🥉"];
-    const placeIndex = index === 0 ? 2 : index === 1 ? 1 : 3;
     const actualPlace = index === 1 ? 1 : index === 0 ? 2 : 3;
+    const places = ["🥇", "🥈", "🥉"];
 
     const card = document.createElement("div");
     card.className = `podium-card place-${actualPlace}`;
@@ -262,9 +262,7 @@ function renderAdminRanking(entries) {
       <div class="place">${places[actualPlace - 1]}</div>
       <div class="name"><strong>${escapeHtml(item.name)}</strong></div>
       <div class="score"><strong>${item.alcohol}</strong></div>
-      <button class="trash-btn" title="Șterge" aria-label="Șterge">
-        🗑️
-      </button>
+      <button class="trash-btn" title="Șterge" aria-label="Șterge">🗑️</button>
     `;
 
     card.querySelector(".trash-btn").addEventListener("click", () => deleteEntry(item.id));
@@ -300,7 +298,7 @@ function deleteEntry(entryId) {
     .delete()
     .catch((error) => {
       alert("Eroare la ștergere: " + error.message);
-      console.error(error);
+      console.error("deleteEntry error:", error);
     });
 }
 
@@ -319,7 +317,9 @@ function resetLeaderboard() {
     .get()
     .then((snapshot) => {
       const promises = [];
-      snapshot.forEach((doc) => promises.push(doc.ref.delete()));
+      snapshot.forEach((doc) => {
+        promises.push(doc.ref.delete());
+      });
       return Promise.all(promises);
     })
     .then(() => {
@@ -327,7 +327,7 @@ function resetLeaderboard() {
     })
     .catch((error) => {
       alert("Eroare la resetare: " + error.message);
-      console.error(error);
+      console.error("resetLeaderboard error:", error);
     });
 }
 
