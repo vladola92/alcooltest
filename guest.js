@@ -130,17 +130,28 @@ function listenToLeaderboard() {
   db.collection("events")
     .doc(eventId)
     .collection("entries")
-    .orderBy("alcohol", "desc")
-    .orderBy("updatedAt", "asc")
     .onSnapshot((snapshot) => {
       const entries = [];
+
       snapshot.forEach((doc) => {
-        entries.push({ id: doc.id, ...doc.data() });
+        const data = doc.data();
+        entries.push({
+          id: doc.id,
+          name: data.name || "",
+          alcohol: Number(data.alcohol || 0),
+          updatedAt: Number(data.updatedAt || data.createdAt || 0)
+        });
+      });
+
+      entries.sort((a, b) => {
+        if (b.alcohol !== a.alcohol) return b.alcohol - a.alcohol;
+        return a.updatedAt - b.updatedAt;
       });
 
       renderGuestRanking(entries);
     }, (error) => {
-      console.error(error);
+      console.error("listenToLeaderboard error:", error);
+      alert("Eroare la citirea clasamentului: " + error.message);
     });
 }
 

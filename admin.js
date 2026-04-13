@@ -114,56 +114,66 @@ function listenToEvents() {
   if (unsubscribeEvents) unsubscribeEvents();
 
   unsubscribeEvents = db.collection("events")
-    .orderBy("createdAt", "desc")
     .onSnapshot((snapshot) => {
       const list = document.getElementById("eventsList");
       list.innerHTML = "";
 
-      if (snapshot.empty) {
+      const events = [];
+      snapshot.forEach((doc) => {
+        events.push({ id: doc.id, ...doc.data() });
+      });
+
+      events.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+      if (!events.length) {
         list.innerHTML = '<div class="muted">Nu există încă evenimente.</div>';
         return;
       }
 
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        const item = document.createElement("button");
-        item.className = "event-item";
-        item.innerHTML = `
-          <strong>${escapeHtml(data.name)}</strong>
-          <span>${escapeHtml(doc.id)}</span>
+      events.forEach((item) => {
+        const btn = document.createElement("button");
+        btn.className = "event-item";
+        btn.innerHTML = `
+          <strong>${escapeHtml(item.name || item.id)}</strong>
+          <span>${escapeHtml(item.id)}</span>
         `;
-        item.addEventListener("click", () => selectEvent(doc.id));
-        list.appendChild(item);
+        btn.addEventListener("click", () => selectEvent(item.id));
+        list.appendChild(btn);
       });
     }, (error) => {
       console.error("listenToEvents error:", error);
+      alert("Eroare la citirea listei de evenimente: " + error.message);
     });
 }
 
-function selectEvent(eventId) {
-  currentAdminEventId = eventId;
+function listenToEntries(eventId) {
+  if (unsubscribeEntries) unsubscribeEntries();
 
-  db.collection("events").doc(eventId).get()
-    .then((doc) => {
-      if (!doc.exists) {
-        alert("Eveniment inexistent.");
-        return;
-      }
+  unsubscribeEntries = db.collection("events")
+    .doc(eventId)
+    .collection("entries")
+    .onSnapshot((snapshot) => {
+      const entries = [];
 
-      const data = doc.data();
-      currentGuestLink = getGuestLink(eventId);
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        entries.push({
+          id: doc.id,
+          name: data.name || "",
+          alcohol: Number(data.alcohol || 0),
+          updatedAt: Number(data.updatedAt || data.createdAt || 0)
+        });
+      });
 
-      document.getElementById("selectedEventName").innerText = data.name;
-      document.getElementById("selectedEventCode").innerText = eventId;
-      document.getElementById("eventLinkBox").innerHTML =
-        `<a href="${currentGuestLink}" target="_blank">${currentGuestLink}</a>`;
+      entries.sort((a, b) => {
+        if (b.alcohol !== a.alcohol) return b.alcohol - a.alcohol;
+        return a.updatedAt - b.updatedAt;
+      });
 
-      renderQr(currentGuestLink);
-      listenToEntries(eventId);
-    })
-    .catch((error) => {
-      alert("Eroare la încărcarea evenimentului: " + error.message);
-      console.error(error);
+      renderAdminRanking(entries);
+    }, (error) => {
+      console.error("listenToEntries error:", error);
+      alert("Eroare la citirea clasamentului: " + error.message);
     });
 }
 
