@@ -8,10 +8,14 @@ const firebaseConfig = {
   measurementId: "G-GEKN2DSJZ3"
 };
 
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+
 const db = firebase.firestore();
 
 let currentAdminEventId = null;
+let unsubscribeAdminLeaderboard = null;
 
 function makeEventId(name) {
     const clean = name
@@ -32,12 +36,19 @@ function makeEventId(name) {
 }
 
 function createEvent() {
-    const eventName = document.getElementById("eventName").value.trim();
+    const eventNameInput = document.getElementById("eventName");
+    const createMessage = document.getElementById("createMessage");
+    const eventLink = document.getElementById("eventLink");
+
+    const eventName = eventNameInput.value.trim();
 
     if (!eventName) {
         alert("Introdu numele evenimentului.");
         return;
     }
+
+    createMessage.innerText = "Se creează evenimentul...";
+    eventLink.innerHTML = "";
 
     const eventId = makeEventId(eventName);
 
@@ -46,17 +57,20 @@ function createEvent() {
         createdAt: Date.now()
     })
     .then(() => {
-        const guestLink = `${window.location.origin}${window.location.pathname.replace("admin.html", "guest.html")}?event=${eventId}`;
+        const guestLink = `${window.location.origin}/alcooltest/guest.html?event=${eventId}`;
 
-        document.getElementById("createMessage").innerText = `Eveniment creat cu succes. Cod: ${eventId}`;
-        document.getElementById("eventLink").innerHTML = `<a href="${guestLink}" target="_blank">${guestLink}</a>`;
+        createMessage.innerText = `Eveniment creat cu succes. Cod: ${eventId}`;
+        eventLink.innerHTML = `<a href="${guestLink}" target="_blank">${guestLink}</a>`;
+
         document.getElementById("adminEventId").value = eventId;
         currentAdminEventId = eventId;
+
         loadAdminEvent();
     })
     .catch((error) => {
+        createMessage.innerText = "";
         alert("Eroare la crearea evenimentului: " + error.message);
-        console.error(error);
+        console.error("createEvent error:", error);
     });
 }
 
@@ -84,35 +98,47 @@ function loadAdminEvent() {
     })
     .catch((error) => {
         alert("Eroare la încărcarea evenimentului: " + error.message);
-        console.error(error);
+        console.error("loadAdminEvent error:", error);
     });
 }
 
 function listenToAdminLeaderboard(eventId) {
-    db.collection("events")
+    if (unsubscribeAdminLeaderboard) {
+        unsubscribeAdminLeaderboard();
+    }
+
+    unsubscribeAdminLeaderboard = db.collection("events")
       .doc(eventId)
       .collection("entries")
       .orderBy("alcohol", "desc")
-      .onSnapshot((snapshot) => {
-          const list = document.getElementById("adminLeaderboard");
-          list.innerHTML = "";
+      .onSnapshot(
+          (snapshot) => {
+              const list = document.getElementById("adminLeaderboard");
+              list.innerHTML = "";
 
-          let position = 1;
+              let position = 1;
 
-          snapshot.forEach((doc) => {
-              const data = doc.data();
-              const li = document.createElement("li");
-              li.innerHTML = `
-                  <strong>${position}. ${data.name} – ${data.alcohol}</strong>
-                  <br>
-                  <button onclick="deleteEntry('${doc.id}')">Șterge</button>
-              `;
-              list.appendChild(li);
-              position++;
-          });
-      }, (error) => {
-          console.error(error);
-      });
+              snapshot.forEach((doc) => {
+                  const data = doc.data();
+                  const li = document.createElement("li");
+                  li.innerHTML = `
+                      <strong>${position}. ${data.name} – ${data.alcohol}</strong>
+                      <br><br>
+                      <button onclick="deleteEntry('${doc.id}')">Șterge</button>
+                  `;
+                  list.appendChild(li);
+                  position++;
+              });
+
+              if (snapshot.empty) {
+                  list.innerHTML = "<li>Nu există încă rezultate pentru acest eveniment.</li>";
+              }
+          },
+          (error) => {
+              console.error("listenToAdminLeaderboard error:", error);
+              alert("Eroare la citirea clasamentului: " + error.message);
+          }
+      );
 }
 
 function deleteEntry(entryId) {
@@ -128,7 +154,7 @@ function deleteEntry(entryId) {
       .delete()
       .catch((error) => {
           alert("Eroare la ștergere: " + error.message);
-          console.error(error);
+          console.error("deleteEntry error:", error);
       });
 }
 
@@ -157,6 +183,6 @@ function resetLeaderboard() {
       })
       .catch((error) => {
           alert("Eroare la resetare: " + error.message);
-          console.error(error);
+          console.error("resetLeaderboard error:", error);
       });
 }
