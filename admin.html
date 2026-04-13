@@ -1,35 +1,35 @@
 <!DOCTYPE html>
 <html lang="ro">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AlcoolTest Admin</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AlcoolTest Admin</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="container">
+  <div class="container">
     <h1>🔐 Admin AlcoolTest</h1>
 
     <div class="card">
-        <h2>Creează eveniment</h2>
-        <input id="eventName" placeholder="Nume eveniment">
-        <button onclick="createEvent()">Creează eveniment</button>
-        <p id="createMessage"></p>
-        <p id="eventLink"></p>
+      <h2>Creează eveniment</h2>
+      <input id="eventName" placeholder="Nume eveniment">
+      <button id="createEventBtn">Creează eveniment</button>
+      <p id="createMessage"></p>
+      <p id="eventLink"></p>
     </div>
 
     <div class="card">
-        <h2>Admin eveniment curent</h2>
-        <input id="adminEventId" placeholder="Cod eveniment">
-        <button onclick="loadAdminEvent()">Încarcă eveniment</button>
-        <p id="adminEventName"></p>
-        <button class="danger" onclick="resetLeaderboard()">Resetează clasamentul</button>
-        <ul id="adminLeaderboard"></ul>
+      <h2>Admin eveniment curent</h2>
+      <input id="adminEventId" placeholder="Cod eveniment">
+      <button id="loadEventBtn">Încarcă eveniment</button>
+      <p id="adminEventName"></p>
+      <button id="resetBtn" class="danger">Resetează clasamentul</button>
+      <ul id="adminLeaderboard"></ul>
     </div>
-</div>
+  </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="admin.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="admin.js"></script>
 </body>
 </html>

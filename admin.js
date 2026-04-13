@@ -18,171 +18,189 @@ let currentAdminEventId = null;
 let unsubscribeAdminLeaderboard = null;
 
 function makeEventId(name) {
-    const clean = name
-        .toLowerCase()
-        .trim()
-        .replace(/ă/g, "a")
-        .replace(/â/g, "a")
-        .replace(/î/g, "i")
-        .replace(/ș/g, "s")
-        .replace(/ş/g, "s")
-        .replace(/ț/g, "t")
-        .replace(/ţ/g, "t")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "");
+  const clean = name
+    .toLowerCase()
+    .trim()
+    .replace(/ă/g, "a")
+    .replace(/â/g, "a")
+    .replace(/î/g, "i")
+    .replace(/ș|ş/g, "s")
+    .replace(/ț|ţ/g, "t")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
-    const randomPart = Math.floor(Math.random() * 9000) + 1000;
-    return `${clean}-${randomPart}`;
+  const randomPart = Math.floor(Math.random() * 9000) + 1000;
+  return `${clean}-${randomPart}`;
 }
 
 function createEvent() {
-    const eventNameInput = document.getElementById("eventName");
-    const createMessage = document.getElementById("createMessage");
-    const eventLink = document.getElementById("eventLink");
+  const eventNameInput = document.getElementById("eventName");
+  const createMessage = document.getElementById("createMessage");
+  const eventLink = document.getElementById("eventLink");
 
-    const eventName = eventNameInput.value.trim();
+  const eventName = eventNameInput.value.trim();
 
-    if (!eventName) {
-        alert("Introdu numele evenimentului.");
-        return;
-    }
+  if (!eventName) {
+    alert("Introdu numele evenimentului.");
+    return;
+  }
 
-    createMessage.innerText = "Se creează evenimentul...";
-    eventLink.innerHTML = "";
+  createMessage.innerText = "Se creează evenimentul...";
+  eventLink.innerHTML = "";
 
-    const eventId = makeEventId(eventName);
+  const eventId = makeEventId(eventName);
 
-    db.collection("events").doc(eventId).set({
-        name: eventName,
-        createdAt: Date.now()
-    })
-    .then(() => {
-        const guestLink = `${window.location.origin}/alcooltest/guest.html?event=${eventId}`;
+  db.collection("events").doc(eventId).set({
+    name: eventName,
+    createdAt: Date.now()
+  })
+  .then(() => {
+    const guestLink = "https://vladola92.github.io/alcooltest/guest.html?event=" + eventId;
 
-        createMessage.innerText = `Eveniment creat cu succes. Cod: ${eventId}`;
-        eventLink.innerHTML = `<a href="${guestLink}" target="_blank">${guestLink}</a>`;
+    createMessage.innerText = "Eveniment creat cu succes. Cod: " + eventId;
+    eventLink.innerHTML = '<a href="' + guestLink + '" target="_blank">' + guestLink + '</a>';
 
-        document.getElementById("adminEventId").value = eventId;
-        currentAdminEventId = eventId;
-
-        loadAdminEvent();
-    })
-    .catch((error) => {
-        createMessage.innerText = "";
-        alert("Eroare la crearea evenimentului: " + error.message);
-        console.error("createEvent error:", error);
-    });
+    document.getElementById("adminEventId").value = eventId;
+    currentAdminEventId = eventId;
+    loadAdminEvent();
+  })
+  .catch((error) => {
+    createMessage.innerText = "";
+    alert("Eroare la crearea evenimentului: " + error.message);
+    console.error("createEvent error:", error);
+  });
 }
 
 function loadAdminEvent() {
-    const eventId = document.getElementById("adminEventId").value.trim();
+  const eventId = document.getElementById("adminEventId").value.trim();
 
-    if (!eventId) {
-        alert("Introdu codul evenimentului.");
-        return;
-    }
+  if (!eventId) {
+    alert("Introdu codul evenimentului.");
+    return;
+  }
 
-    currentAdminEventId = eventId;
+  currentAdminEventId = eventId;
 
-    db.collection("events").doc(eventId).get()
+  db.collection("events").doc(eventId).get()
     .then((doc) => {
-        if (!doc.exists) {
-            document.getElementById("adminEventName").innerText = "Eveniment inexistent.";
-            document.getElementById("adminLeaderboard").innerHTML = "";
-            return;
-        }
+      const nameEl = document.getElementById("adminEventName");
+      const list = document.getElementById("adminLeaderboard");
 
-        const data = doc.data();
-        document.getElementById("adminEventName").innerText = `Eveniment: ${data.name}`;
-        listenToAdminLeaderboard(eventId);
+      if (!doc.exists) {
+        nameEl.innerText = "Eveniment inexistent.";
+        list.innerHTML = "";
+        return;
+      }
+
+      const data = doc.data();
+      nameEl.innerText = "Eveniment: " + data.name;
+      listenToAdminLeaderboard(eventId);
     })
     .catch((error) => {
-        alert("Eroare la încărcarea evenimentului: " + error.message);
-        console.error("loadAdminEvent error:", error);
+      alert("Eroare la încărcarea evenimentului: " + error.message);
+      console.error("loadAdminEvent error:", error);
     });
 }
 
 function listenToAdminLeaderboard(eventId) {
-    if (unsubscribeAdminLeaderboard) {
-        unsubscribeAdminLeaderboard();
-    }
+  if (unsubscribeAdminLeaderboard) {
+    unsubscribeAdminLeaderboard();
+  }
 
-    unsubscribeAdminLeaderboard = db.collection("events")
-      .doc(eventId)
-      .collection("entries")
-      .orderBy("alcohol", "desc")
-      .onSnapshot(
-          (snapshot) => {
-              const list = document.getElementById("adminLeaderboard");
-              list.innerHTML = "";
+  unsubscribeAdminLeaderboard = db.collection("events")
+    .doc(eventId)
+    .collection("entries")
+    .orderBy("alcohol", "desc")
+    .onSnapshot(
+      (snapshot) => {
+        const list = document.getElementById("adminLeaderboard");
+        list.innerHTML = "";
 
-              let position = 1;
+        if (snapshot.empty) {
+          list.innerHTML = "<li>Nu există încă rezultate pentru acest eveniment.</li>";
+          return;
+        }
 
-              snapshot.forEach((doc) => {
-                  const data = doc.data();
-                  const li = document.createElement("li");
-                  li.innerHTML = `
-                      <strong>${position}. ${data.name} – ${data.alcohol}</strong>
-                      <br><br>
-                      <button onclick="deleteEntry('${doc.id}')">Șterge</button>
-                  `;
-                  list.appendChild(li);
-                  position++;
-              });
+        let position = 1;
 
-              if (snapshot.empty) {
-                  list.innerHTML = "<li>Nu există încă rezultate pentru acest eveniment.</li>";
-              }
-          },
-          (error) => {
-              console.error("listenToAdminLeaderboard error:", error);
-              alert("Eroare la citirea clasamentului: " + error.message);
-          }
-      );
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          const li = document.createElement("li");
+
+          li.innerHTML =
+            "<strong>" + position + ". " + data.name + " – " + data.alcohol + "</strong><br><br>" +
+            "<button data-id=\"" + doc.id + "\">Șterge</button>";
+
+          const btn = li.querySelector("button");
+          btn.addEventListener("click", function () {
+            deleteEntry(doc.id);
+          });
+
+          list.appendChild(li);
+          position++;
+        });
+      },
+      (error) => {
+        alert("Eroare la citirea clasamentului: " + error.message);
+        console.error("listenToAdminLeaderboard error:", error);
+      }
+    );
 }
 
 function deleteEntry(entryId) {
-    if (!currentAdminEventId) {
-        alert("Nu este încărcat niciun eveniment.");
-        return;
-    }
+  if (!currentAdminEventId) {
+    alert("Nu este încărcat niciun eveniment.");
+    return;
+  }
 
-    db.collection("events")
-      .doc(currentAdminEventId)
-      .collection("entries")
-      .doc(entryId)
-      .delete()
-      .catch((error) => {
-          alert("Eroare la ștergere: " + error.message);
-          console.error("deleteEntry error:", error);
-      });
+  db.collection("events")
+    .doc(currentAdminEventId)
+    .collection("entries")
+    .doc(entryId)
+    .delete()
+    .catch((error) => {
+      alert("Eroare la ștergere: " + error.message);
+      console.error("deleteEntry error:", error);
+    });
 }
 
 function resetLeaderboard() {
-    if (!currentAdminEventId) {
-        alert("Nu este încărcat niciun eveniment.");
-        return;
-    }
+  if (!currentAdminEventId) {
+    alert("Nu este încărcat niciun eveniment.");
+    return;
+  }
 
-    const confirmReset = confirm("Sigur vrei să resetezi clasamentul?");
-    if (!confirmReset) return;
+  const ok = confirm("Sigur vrei să resetezi clasamentul?");
+  if (!ok) return;
 
-    db.collection("events")
-      .doc(currentAdminEventId)
-      .collection("entries")
-      .get()
-      .then((snapshot) => {
-          const promises = [];
-          snapshot.forEach((doc) => {
-              promises.push(doc.ref.delete());
-          });
-          return Promise.all(promises);
-      })
-      .then(() => {
-          alert("Clasamentul a fost resetat.");
-      })
-      .catch((error) => {
-          alert("Eroare la resetare: " + error.message);
-          console.error("resetLeaderboard error:", error);
+  db.collection("events")
+    .doc(currentAdminEventId)
+    .collection("entries")
+    .get()
+    .then((snapshot) => {
+      const promises = [];
+      snapshot.forEach((doc) => {
+        promises.push(doc.ref.delete());
       });
+      return Promise.all(promises);
+    })
+    .then(() => {
+      alert("Clasamentul a fost resetat.");
+    })
+    .catch((error) => {
+      alert("Eroare la resetare: " + error.message);
+      console.error("resetLeaderboard error:", error);
+    });
 }
+
+document.addEventListener("DOMContentLoaded", function () {
+  const createBtn = document.getElementById("createEventBtn");
+  const loadBtn = document.getElementById("loadEventBtn");
+  const resetBtn = document.getElementById("resetBtn");
+
+  createBtn.addEventListener("click", createEvent);
+  loadBtn.addEventListener("click", loadAdminEvent);
+  resetBtn.addEventListener("click", resetLeaderboard);
+
+  console.log("admin.js loaded corect");
+});
