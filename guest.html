@@ -1,32 +1,41 @@
 <!DOCTYPE html>
 <html lang="ro">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AlcoolTest Invitați</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AlcoolTest</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-<body>
-<div class="container guest-page">
-    <h1>🍻 AlcoolTest</h1>
-    <p id="event-title"></p>
-
-    <div class="card guest-card">
-        <h2>Introdu rezultatul</h2>
-        <input id="name" placeholder="Nume / Poreclă">
-        <input id="alcohol" type="number" step="0.01" placeholder="Alcoolemie">
-        <button onclick="submitData()">Trimite</button>
-        <p id="statusMessage"></p>
+<body class="party-bg">
+  <div class="container guest-container">
+    <div class="card glass guest-hero">
+      <h1>🍻 AlcoolTest</h1>
+      <p id="event-title">Se încarcă evenimentul...</p>
     </div>
 
-    <div class="card">
-        <h2>🏆 Clasament live</h2>
-        <ul id="leaderboard"></ul>
+    <div class="card glass">
+      <h2>Introdu rezultatul</h2>
+      <input id="name" placeholder="Nume / Poreclă">
+      <input id="alcohol" type="number" step="0.01" placeholder="Alcoolemie">
+      <button id="submitBtn">Trimite</button>
+      <p id="statusMessage" class="muted"></p>
     </div>
-</div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="guest.js"></script>
+    <div class="card glass">
+      <h2>🏆 Podium</h2>
+      <div id="guestPodium" class="podium">
+        <div class="podium-empty">Nu există încă rezultate.</div>
+      </div>
+    </div>
+
+    <div class="card glass">
+      <h2>Restul participanților</h2>
+      <ul id="guestRestList" class="ranking-list"></ul>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="guest.js"></script>
 </body>
 </html>

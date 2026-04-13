@@ -11,14 +11,21 @@ const firebaseConfig = {
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
-
 const db = firebase.firestore();
 
-let currentAdminEventId = null;
-let unsubscribeAdminLeaderboard = null;
+/*
+  PROTECȚIE MINIMĂ.
+  Schimbă parola de mai jos cu una aleasă de tine.
+*/
+const ADMIN_PASSWORD = "alcooltest2026";
 
-function makeEventId(name) {
-  const clean = name
+let currentAdminEventId = null;
+let currentGuestLink = "";
+let unsubscribeEntries = null;
+let unsubscribeEvents = null;
+
+function slugify(text) {
+  return text
     .toLowerCase()
     .trim()
     .replace(/ă/g, "a")
@@ -28,128 +35,251 @@ function makeEventId(name) {
     .replace(/ț|ţ/g, "t")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
 
+function makeEventId(name) {
+  const slug = slugify(name);
   const randomPart = Math.floor(Math.random() * 9000) + 1000;
-  return `${clean}-${randomPart}`;
+  return `${slug}-${randomPart}`;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function getGuestLink(eventId) {
+  return `https://vladola92.github.io/alcooltest/guest.html?event=${eventId}`;
+}
+
+function showAdminApp() {
+  document.getElementById("admin-login").classList.add("hidden");
+  document.getElementById("admin-app").classList.remove("hidden");
+  listenToEvents();
+}
+
+function logoutAdmin() {
+  localStorage.removeItem("alcooltest_admin_ok");
+  location.reload();
+}
+
+function loginAdmin() {
+  const password = document.getElementById("adminPassword").value;
+  const message = document.getElementById("loginMessage");
+
+  if (password === ADMIN_PASSWORD) {
+    localStorage.setItem("alcooltest_admin_ok", "yes");
+    showAdminApp();
+  } else {
+    message.innerText = "Parolă incorectă.";
+  }
 }
 
 function createEvent() {
-  const eventNameInput = document.getElementById("eventName");
-  const createMessage = document.getElementById("createMessage");
-  const eventLink = document.getElementById("eventLink");
-
-  const eventName = eventNameInput.value.trim();
+  const input = document.getElementById("eventName");
+  const message = document.getElementById("createMessage");
+  const eventName = input.value.trim();
 
   if (!eventName) {
     alert("Introdu numele evenimentului.");
     return;
   }
 
-  createMessage.innerText = "Se creează evenimentul...";
-  eventLink.innerHTML = "";
+  message.innerText = "Se creează evenimentul...";
 
   const eventId = makeEventId(eventName);
 
   db.collection("events").doc(eventId).set({
     name: eventName,
+    slug: slugify(eventName),
     createdAt: Date.now()
   })
   .then(() => {
-    const guestLink = "https://vladola92.github.io/alcooltest/guest.html?event=" + eventId;
-
-    createMessage.innerText = "Eveniment creat cu succes. Cod: " + eventId;
-    eventLink.innerHTML = '<a href="' + guestLink + '" target="_blank">' + guestLink + '</a>';
-
-    document.getElementById("adminEventId").value = eventId;
-    currentAdminEventId = eventId;
-    loadAdminEvent();
+    message.innerText = `Eveniment creat: ${eventName}`;
+    input.value = "";
+    selectEvent(eventId);
   })
   .catch((error) => {
-    createMessage.innerText = "";
     alert("Eroare la crearea evenimentului: " + error.message);
-    console.error("createEvent error:", error);
+    console.error(error);
+    message.innerText = "";
   });
 }
 
-function loadAdminEvent() {
-  const eventId = document.getElementById("adminEventId").value.trim();
+function listenToEvents() {
+  if (unsubscribeEvents) unsubscribeEvents();
 
-  if (!eventId) {
-    alert("Introdu codul evenimentului.");
-    return;
-  }
+  unsubscribeEvents = db.collection("events")
+    .orderBy("createdAt", "desc")
+    .onSnapshot((snapshot) => {
+      const list = document.getElementById("eventsList");
+      list.innerHTML = "";
 
+      if (snapshot.empty) {
+        list.innerHTML = '<div class="muted">Nu există încă evenimente.</div>';
+        return;
+      }
+
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const item = document.createElement("button");
+        item.className = "event-item";
+        item.innerHTML = `
+          <strong>${escapeHtml(data.name)}</strong>
+          <span>${escapeHtml(doc.id)}</span>
+        `;
+        item.addEventListener("click", () => selectEvent(doc.id));
+        list.appendChild(item);
+      });
+    }, (error) => {
+      console.error("listenToEvents error:", error);
+    });
+}
+
+function selectEvent(eventId) {
   currentAdminEventId = eventId;
 
   db.collection("events").doc(eventId).get()
     .then((doc) => {
-      const nameEl = document.getElementById("adminEventName");
-      const list = document.getElementById("adminLeaderboard");
-
       if (!doc.exists) {
-        nameEl.innerText = "Eveniment inexistent.";
-        list.innerHTML = "";
+        alert("Eveniment inexistent.");
         return;
       }
 
       const data = doc.data();
-      nameEl.innerText = "Eveniment: " + data.name;
-      listenToAdminLeaderboard(eventId);
+      currentGuestLink = getGuestLink(eventId);
+
+      document.getElementById("selectedEventName").innerText = data.name;
+      document.getElementById("selectedEventCode").innerText = eventId;
+      document.getElementById("eventLinkBox").innerHTML =
+        `<a href="${currentGuestLink}" target="_blank">${currentGuestLink}</a>`;
+
+      renderQr(currentGuestLink);
+      listenToEntries(eventId);
     })
     .catch((error) => {
       alert("Eroare la încărcarea evenimentului: " + error.message);
-      console.error("loadAdminEvent error:", error);
+      console.error(error);
     });
 }
 
-function listenToAdminLeaderboard(eventId) {
-  if (unsubscribeAdminLeaderboard) {
-    unsubscribeAdminLeaderboard();
+function renderQr(text) {
+  const qrBox = document.getElementById("qrcode");
+  qrBox.innerHTML = "";
+
+  new QRCode(qrBox, {
+    text,
+    width: 180,
+    height: 180
+  });
+}
+
+function copyGuestLink() {
+  if (!currentGuestLink) {
+    alert("Selectează mai întâi un eveniment.");
+    return;
   }
 
-  unsubscribeAdminLeaderboard = db.collection("events")
+  navigator.clipboard.writeText(currentGuestLink)
+    .then(() => {
+      alert("Link copiat.");
+    })
+    .catch(() => {
+      alert("Nu am putut copia linkul.");
+    });
+}
+
+function listenToEntries(eventId) {
+  if (unsubscribeEntries) unsubscribeEntries();
+
+  unsubscribeEntries = db.collection("events")
     .doc(eventId)
     .collection("entries")
     .orderBy("alcohol", "desc")
-    .onSnapshot(
-      (snapshot) => {
-        const list = document.getElementById("adminLeaderboard");
-        list.innerHTML = "";
+    .orderBy("updatedAt", "asc")
+    .onSnapshot((snapshot) => {
+      const entries = [];
+      snapshot.forEach((doc) => {
+        entries.push({ id: doc.id, ...doc.data() });
+      });
 
-        if (snapshot.empty) {
-          list.innerHTML = "<li>Nu există încă rezultate pentru acest eveniment.</li>";
-          return;
-        }
+      renderAdminRanking(entries);
+    }, (error) => {
+      console.error("listenToEntries error:", error);
+      alert("Eroare la citirea clasamentului: " + error.message);
+    });
+}
 
-        let position = 1;
+function renderAdminRanking(entries) {
+  const podium = document.getElementById("adminPodium");
+  const restList = document.getElementById("adminRestList");
 
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          const li = document.createElement("li");
+  podium.innerHTML = "";
+  restList.innerHTML = "";
 
-          li.innerHTML =
-            "<strong>" + position + ". " + data.name + " – " + data.alcohol + "</strong><br><br>" +
-            "<button data-id=\"" + doc.id + "\">Șterge</button>";
+  if (!entries.length) {
+    podium.innerHTML = '<div class="podium-empty">Nu există încă rezultate.</div>';
+    restList.innerHTML = "";
+    return;
+  }
 
-          const btn = li.querySelector("button");
-          btn.addEventListener("click", function () {
-            deleteEntry(doc.id);
-          });
+  const top3 = entries.slice(0, 3);
+  const rest = entries.slice(3);
 
-          list.appendChild(li);
-          position++;
-        });
-      },
-      (error) => {
-        alert("Eroare la citirea clasamentului: " + error.message);
-        console.error("listenToAdminLeaderboard error:", error);
-      }
-    );
+  const podiumOrder = [1, 0, 2];
+
+  podiumOrder.forEach((index) => {
+    const item = top3[index];
+    if (!item) {
+      const empty = document.createElement("div");
+      empty.className = "podium-card empty";
+      empty.innerHTML = `<div class="place">-</div><div class="name">Liber</div>`;
+      podium.appendChild(empty);
+      return;
+    }
+
+    const places = ["🥇", "🥈", "🥉"];
+    const placeIndex = index === 0 ? 2 : index === 1 ? 1 : 3;
+    const actualPlace = index === 1 ? 1 : index === 0 ? 2 : 3;
+
+    const card = document.createElement("div");
+    card.className = `podium-card place-${actualPlace}`;
+    card.innerHTML = `
+      <div class="place">${places[actualPlace - 1]}</div>
+      <div class="name"><strong>${escapeHtml(item.name)}</strong></div>
+      <div class="score"><strong>${item.alcohol}</strong></div>
+      <button class="trash-btn" title="Șterge" aria-label="Șterge">
+        🗑️
+      </button>
+    `;
+
+    card.querySelector(".trash-btn").addEventListener("click", () => deleteEntry(item.id));
+    podium.appendChild(card);
+  });
+
+  rest.forEach((item, idx) => {
+    const li = document.createElement("li");
+    li.className = "ranking-item";
+    li.innerHTML = `
+      <div>
+        <span class="rank-number">${idx + 4}.</span>
+        <span>${escapeHtml(item.name)}</span>
+        <span class="normal-score">${item.alcohol}</span>
+      </div>
+      <button class="trash-btn" title="Șterge" aria-label="Șterge">🗑️</button>
+    `;
+    li.querySelector(".trash-btn").addEventListener("click", () => deleteEntry(item.id));
+    restList.appendChild(li);
+  });
 }
 
 function deleteEntry(entryId) {
   if (!currentAdminEventId) {
-    alert("Nu este încărcat niciun eveniment.");
+    alert("Selectează un eveniment.");
     return;
   }
 
@@ -160,13 +290,13 @@ function deleteEntry(entryId) {
     .delete()
     .catch((error) => {
       alert("Eroare la ștergere: " + error.message);
-      console.error("deleteEntry error:", error);
+      console.error(error);
     });
 }
 
 function resetLeaderboard() {
   if (!currentAdminEventId) {
-    alert("Nu este încărcat niciun eveniment.");
+    alert("Selectează un eveniment.");
     return;
   }
 
@@ -179,9 +309,7 @@ function resetLeaderboard() {
     .get()
     .then((snapshot) => {
       const promises = [];
-      snapshot.forEach((doc) => {
-        promises.push(doc.ref.delete());
-      });
+      snapshot.forEach((doc) => promises.push(doc.ref.delete()));
       return Promise.all(promises);
     })
     .then(() => {
@@ -189,18 +317,18 @@ function resetLeaderboard() {
     })
     .catch((error) => {
       alert("Eroare la resetare: " + error.message);
-      console.error("resetLeaderboard error:", error);
+      console.error(error);
     });
 }
 
-document.addEventListener("DOMContentLoaded", function () {
-  const createBtn = document.getElementById("createEventBtn");
-  const loadBtn = document.getElementById("loadEventBtn");
-  const resetBtn = document.getElementById("resetBtn");
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("loginBtn").addEventListener("click", loginAdmin);
+  document.getElementById("logoutBtn").addEventListener("click", logoutAdmin);
+  document.getElementById("createEventBtn").addEventListener("click", createEvent);
+  document.getElementById("copyLinkBtn").addEventListener("click", copyGuestLink);
+  document.getElementById("resetBtn").addEventListener("click", resetLeaderboard);
 
-  createBtn.addEventListener("click", createEvent);
-  loadBtn.addEventListener("click", loadAdminEvent);
-  resetBtn.addEventListener("click", resetLeaderboard);
-
-  console.log("admin.js loaded corect");
+  if (localStorage.getItem("alcooltest_admin_ok") === "yes") {
+    showAdminApp();
+  }
 });

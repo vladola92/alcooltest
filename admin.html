@@ -6,30 +6,70 @@
   <title>AlcoolTest Admin</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <div class="container">
-    <h1>🔐 Admin AlcoolTest</h1>
+<body class="party-bg">
+  <div id="admin-login" class="container small-container">
+    <div class="card glass">
+      <h1>🔐 Admin AlcoolTest</h1>
+      <p>Introduce parola de admin</p>
+      <input id="adminPassword" type="password" placeholder="Parolă admin">
+      <button id="loginBtn">Intră</button>
+      <p id="loginMessage" class="muted"></p>
+    </div>
+  </div>
 
-    <div class="card">
+  <div id="admin-app" class="container hidden">
+    <div class="top-bar">
+      <h1>🍻 Admin AlcoolTest</h1>
+      <button id="logoutBtn" class="secondary-btn">Ieșire</button>
+    </div>
+
+    <div class="card glass">
       <h2>Creează eveniment</h2>
       <input id="eventName" placeholder="Nume eveniment">
       <button id="createEventBtn">Creează eveniment</button>
-      <p id="createMessage"></p>
-      <p id="eventLink"></p>
+      <p id="createMessage" class="muted"></p>
     </div>
 
-    <div class="card">
-      <h2>Admin eveniment curent</h2>
-      <input id="adminEventId" placeholder="Cod eveniment">
-      <button id="loadEventBtn">Încarcă eveniment</button>
-      <p id="adminEventName"></p>
-      <button id="resetBtn" class="danger">Resetează clasamentul</button>
-      <ul id="adminLeaderboard"></ul>
+    <div class="grid-2">
+      <div class="card glass">
+        <h2>Evenimente</h2>
+        <div id="eventsList" class="event-list"></div>
+      </div>
+
+      <div class="card glass">
+        <h2>Detalii eveniment</h2>
+        <p><strong>Nume:</strong> <span id="selectedEventName">-</span></p>
+        <p><strong>Cod:</strong> <span id="selectedEventCode">-</span></p>
+        <p><strong>Link guest:</strong></p>
+        <div id="eventLinkBox" class="link-box">-</div>
+
+        <div class="button-row">
+          <button id="copyLinkBtn">Copiază link</button>
+          <button id="resetBtn" class="danger">Resetează clasamentul</button>
+        </div>
+
+        <div class="qr-wrap">
+          <div id="qrcode"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card glass">
+      <h2>🏆 Podium</h2>
+      <div id="adminPodium" class="podium">
+        <div class="podium-empty">Selectează un eveniment</div>
+      </div>
+    </div>
+
+    <div class="card glass">
+      <h2>Restul participanților</h2>
+      <ul id="adminRestList" class="ranking-list"></ul>
     </div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="admin.js"></script>
 </body>
 </html>
