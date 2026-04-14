@@ -8,6 +8,7 @@
 </head>
 <body class="party-bg">
   <div class="container guest-container">
+
     <div class="card glass guest-hero">
       <h1>🍻 AlcoolTest</h1>
       <p id="event-title">Se încarcă evenimentul...</p>
@@ -21,6 +22,27 @@
       <p id="statusMessage" class="muted"></p>
     </div>
 
+    <!-- 🔥 STATISTICI -->
+    <div class="card glass">
+      <h2>📊 Statistici</h2>
+      <div class="stats">
+        <div class="stat-box">
+          <div class="stat-value" id="statCount">0</div>
+          <div class="stat-label">Participanți</div>
+        </div>
+
+        <div class="stat-box">
+          <div class="stat-value" id="statAvg">0.00</div>
+          <div class="stat-label">Medie</div>
+        </div>
+
+        <div class="stat-box">
+          <div class="stat-value" id="statMax">0.00</div>
+          <div class="stat-label">Maxim</div>
+        </div>
+      </div>
+    </div>
+
     <div class="card glass">
       <h2>🏆 Podium</h2>
       <div id="guestPodium" class="podium">
@@ -32,6 +54,7 @@
       <h2>Restul participanților</h2>
       <ul id="guestRestList" class="ranking-list"></ul>
     </div>
+
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>

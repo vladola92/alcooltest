@@ -161,7 +161,30 @@ function listenToLeaderboard() {
     });
 }
 
+function updateStats(entries) {
+  const count = entries.length;
+
+  let total = 0;
+  let max = 0;
+
+  entries.forEach((entry) => {
+    const value = Number(entry.alcohol || 0);
+    total += value;
+    if (value > max) {
+      max = value;
+    }
+  });
+
+  const avg = count ? total / count : 0;
+
+  document.getElementById("statCount").innerText = count;
+  document.getElementById("statAvg").innerText = avg.toFixed(2);
+  document.getElementById("statMax").innerText = max.toFixed(2);
+}
+
 function renderGuestRanking(entries) {
+  updateStats(entries);
+
   const podium = document.getElementById("guestPodium");
   const restList = document.getElementById("guestRestList");
 
