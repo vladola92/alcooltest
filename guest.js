@@ -16,6 +16,9 @@ const db = firebase.firestore();
 const params = new URLSearchParams(window.location.search);
 const eventId = params.get("event");
 
+let previousMaxAlcohol = null;
+let recordBadgeTimeout = null;
+
 function slugify(text) {
   return text
     .toLowerCase()
@@ -161,6 +164,31 @@ function listenToLeaderboard() {
     });
 }
 
+function showNewRecordHighlight(newMax) {
+  const badge = document.getElementById("recordBadge");
+  const maxBox = document.querySelector(".max-box");
+
+  badge.innerText = `🔥 Record nou: ${formatAlcohol(newMax)}`;
+  badge.classList.remove("hidden");
+  badge.classList.add("show-record");
+
+  if (maxBox) {
+    maxBox.classList.add("record-pulse");
+  }
+
+  if (recordBadgeTimeout) {
+    clearTimeout(recordBadgeTimeout);
+  }
+
+  recordBadgeTimeout = setTimeout(() => {
+    badge.classList.remove("show-record");
+    badge.classList.add("hidden");
+    if (maxBox) {
+      maxBox.classList.remove("record-pulse");
+    }
+  }, 3500);
+}
+
 function updateStats(entries) {
   const count = entries.length;
 
@@ -180,6 +208,12 @@ function updateStats(entries) {
   document.getElementById("statCount").innerText = count;
   document.getElementById("statAvg").innerText = avg.toFixed(2);
   document.getElementById("statMax").innerText = max.toFixed(2);
+
+  if (previousMaxAlcohol !== null && max > previousMaxAlcohol) {
+    showNewRecordHighlight(max);
+  }
+
+  previousMaxAlcohol = max;
 }
 
 function renderGuestRanking(entries) {

@@ -43,12 +43,38 @@
       </div>
     </div>
 
-    <div class="card glass">
-      <h2>🏆 Podium</h2>
-      <div id="guestPodium" class="podium">
-        <div class="podium-empty">Nu există încă rezultate.</div>
+<div class="card glass stats-card">
+  <div class="stats-header">
+    <h2>📊 Statistici live</h2>
+    <div id="recordBadge" class="record-badge hidden">🔥 Record nou!</div>
+  </div>
+
+  <div class="stats stats-premium">
+    <div class="stat-box participants-box">
+      <div class="stat-icon">👥</div>
+      <div class="stat-content">
+        <div class="stat-value" id="statCount">0</div>
+        <div class="stat-label">Participanți</div>
       </div>
     </div>
+
+    <div class="stat-box avg-box">
+      <div class="stat-icon">📈</div>
+      <div class="stat-content">
+        <div class="stat-value" id="statAvg">0.00</div>
+        <div class="stat-label">Media alcoolemiei</div>
+      </div>
+    </div>
+
+    <div class="stat-box max-box">
+      <div class="stat-icon">🏆</div>
+      <div class="stat-content">
+        <div class="stat-value" id="statMax">0.00</div>
+        <div class="stat-label">Cel mai mare scor</div>
+      </div>
+    </div>
+  </div>
+</div>
 
     <div class="card glass">
       <h2>Restul participanților</h2>
