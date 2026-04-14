@@ -48,6 +48,10 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
+function formatAlcohol(value) {
+  return Number(value || 0).toFixed(2);
+}
+
 function getGuestLink(eventId) {
   return `https://vladola92.github.io/alcooltest/guest.html?event=${eventId}`;
 }
@@ -89,28 +93,30 @@ function createEvent() {
 
   const eventId = makeEventId(eventName);
 
-  db.collection("events").doc(eventId).set({
-    name: eventName,
-    slug: slugify(eventName),
-    createdAt: Date.now()
-  })
-  .then(() => {
-    message.innerText = `Eveniment creat: ${eventName}`;
-    input.value = "";
-    selectEvent(eventId);
-  })
-  .catch((error) => {
-    alert("Eroare la crearea evenimentului: " + error.message);
-    console.error("createEvent error:", error);
-    message.innerText = "";
-  });
+  db.collection("events")
+    .doc(eventId)
+    .set({
+      name: eventName,
+      slug: slugify(eventName),
+      createdAt: Date.now()
+    })
+    .then(() => {
+      message.innerText = `Eveniment creat: ${eventName}`;
+      input.value = "";
+      selectEvent(eventId);
+    })
+    .catch((error) => {
+      alert("Eroare la crearea evenimentului: " + error.message);
+      console.error("createEvent error:", error);
+      message.innerText = "";
+    });
 }
 
 function listenToEvents() {
   if (unsubscribeEvents) unsubscribeEvents();
 
-  unsubscribeEvents = db.collection("events")
-    .onSnapshot((snapshot) => {
+  unsubscribeEvents = db.collection("events").onSnapshot(
+    (snapshot) => {
       const list = document.getElementById("eventsList");
       list.innerHTML = "";
 
@@ -136,16 +142,20 @@ function listenToEvents() {
         btn.addEventListener("click", () => selectEvent(item.id));
         list.appendChild(btn);
       });
-    }, (error) => {
+    },
+    (error) => {
       console.error("listenToEvents error:", error);
       alert("Eroare la citirea listei de evenimente: " + error.message);
-    });
+    }
+  );
 }
 
 function selectEvent(eventId) {
   currentAdminEventId = eventId;
 
-  db.collection("events").doc(eventId).get()
+  db.collection("events")
+    .doc(eventId)
+    .get()
     .then((doc) => {
       if (!doc.exists) {
         alert("Eveniment inexistent.");
@@ -175,29 +185,32 @@ function listenToEntries(eventId) {
   unsubscribeEntries = db.collection("events")
     .doc(eventId)
     .collection("entries")
-    .onSnapshot((snapshot) => {
-      const entries = [];
+    .onSnapshot(
+      (snapshot) => {
+        const entries = [];
 
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        entries.push({
-          id: doc.id,
-          name: data.name || "",
-          alcohol: Number(data.alcohol || 0),
-          updatedAt: Number(data.updatedAt || data.createdAt || 0)
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          entries.push({
+            id: doc.id,
+            name: data.name || "",
+            alcohol: Number(data.alcohol || 0),
+            updatedAt: Number(data.updatedAt || data.createdAt || 0)
+          });
         });
-      });
 
-      entries.sort((a, b) => {
-        if (b.alcohol !== a.alcohol) return b.alcohol - a.alcohol;
-        return a.updatedAt - b.updatedAt;
-      });
+        entries.sort((a, b) => {
+          if (b.alcohol !== a.alcohol) return b.alcohol - a.alcohol;
+          return a.updatedAt - b.updatedAt;
+        });
 
-      renderAdminRanking(entries);
-    }, (error) => {
-      console.error("listenToEntries error:", error);
-      alert("Eroare la citirea clasamentului: " + error.message);
-    });
+        renderAdminRanking(entries);
+      },
+      (error) => {
+        console.error("listenToEntries error:", error);
+        alert("Eroare la citirea clasamentului: " + error.message);
+      }
+    );
 }
 
 function renderQr(text) {
@@ -238,14 +251,19 @@ function renderAdminRanking(entries) {
     return;
   }
 
-  const top3 = entries.slice(0, 3);
+  const first = entries[0] || null;
+  const second = entries[1] || null;
+  const third = entries[2] || null;
   const rest = entries.slice(3);
-  const podiumOrder = [1, 0, 2];
 
-  podiumOrder.forEach((index) => {
-    const item = top3[index];
+  const podiumItems = [
+    { person: second, place: 2, medal: "🥈" },
+    { person: first, place: 1, medal: "🥇" },
+    { person: third, place: 3, medal: "🥉" }
+  ];
 
-    if (!item) {
+  podiumItems.forEach((item) => {
+    if (!item.person) {
       const empty = document.createElement("div");
       empty.className = "podium-card empty";
       empty.innerHTML = `<div class="place">-</div><div class="name">Liber</div>`;
@@ -253,19 +271,16 @@ function renderAdminRanking(entries) {
       return;
     }
 
-    const actualPlace = index === 1 ? 1 : index === 0 ? 2 : 3;
-    const places = ["🥇", "🥈", "🥉"];
-
     const card = document.createElement("div");
-    card.className = `podium-card place-${actualPlace}`;
+    card.className = `podium-card place-${item.place}`;
     card.innerHTML = `
-      <div class="place">${places[actualPlace - 1]}</div>
-      <div class="name"><strong>${escapeHtml(item.name)}</strong></div>
-      <div class="score"><strong>${item.alcohol}</strong></div>
+      <div class="place">${item.medal}</div>
+      <div class="name"><strong>${escapeHtml(item.person.name)}</strong></div>
+      <div class="score"><strong>${formatAlcohol(item.person.alcohol)}</strong></div>
       <button class="trash-btn" title="Șterge" aria-label="Șterge">🗑️</button>
     `;
 
-    card.querySelector(".trash-btn").addEventListener("click", () => deleteEntry(item.id));
+    card.querySelector(".trash-btn").addEventListener("click", () => deleteEntry(item.person.id));
     podium.appendChild(card);
   });
 
@@ -276,7 +291,7 @@ function renderAdminRanking(entries) {
       <div>
         <span class="rank-number">${idx + 4}.</span>
         <span>${escapeHtml(item.name)}</span>
-        <span class="normal-score">${item.alcohol}</span>
+        <span class="normal-score">${formatAlcohol(item.alcohol)}</span>
       </div>
       <button class="trash-btn" title="Șterge" aria-label="Șterge">🗑️</button>
     `;

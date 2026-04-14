@@ -38,6 +38,10 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
+function formatAlcohol(value) {
+  return Number(value || 0).toFixed(2);
+}
+
 function getEntryIdFromName(name) {
   return slugify(name);
 }
@@ -48,7 +52,9 @@ function loadEvent() {
     return;
   }
 
-  db.collection("events").doc(eventId).get()
+  db.collection("events")
+    .doc(eventId)
+    .get()
     .then((doc) => {
       if (!doc.exists) {
         document.getElementById("event-title").innerText = "Eveniment inexistent.";
@@ -167,14 +173,19 @@ function renderGuestRanking(entries) {
     return;
   }
 
-  const top3 = entries.slice(0, 3);
+  const first = entries[0] || null;
+  const second = entries[1] || null;
+  const third = entries[2] || null;
   const rest = entries.slice(3);
 
-  const podiumOrder = [1, 0, 2];
+  const podiumItems = [
+    { person: second, place: 2, medal: "🥈" },
+    { person: first, place: 1, medal: "🥇" },
+    { person: third, place: 3, medal: "🥉" }
+  ];
 
-  podiumOrder.forEach((index) => {
-    const item = top3[index];
-    if (!item) {
+  podiumItems.forEach((item) => {
+    if (!item.person) {
       const empty = document.createElement("div");
       empty.className = "podium-card empty";
       empty.innerHTML = `<div class="place">-</div><div class="name">Liber</div>`;
@@ -182,15 +193,12 @@ function renderGuestRanking(entries) {
       return;
     }
 
-    const places = ["🥇", "🥈", "🥉"];
-    const actualPlace = index === 1 ? 1 : index === 0 ? 2 : 3;
-
     const card = document.createElement("div");
-    card.className = `podium-card place-${actualPlace}`;
+    card.className = `podium-card place-${item.place}`;
     card.innerHTML = `
-      <div class="place">${places[actualPlace - 1]}</div>
-      <div class="name"><strong>${escapeHtml(item.name)}</strong></div>
-      <div class="score"><strong>${item.alcohol}</strong></div>
+      <div class="place">${item.medal}</div>
+      <div class="name"><strong>${escapeHtml(item.person.name)}</strong></div>
+      <div class="score"><strong>${formatAlcohol(item.person.alcohol)}</strong></div>
     `;
     podium.appendChild(card);
   });
@@ -202,7 +210,7 @@ function renderGuestRanking(entries) {
       <div>
         <span class="rank-number">${idx + 4}.</span>
         <span>${escapeHtml(item.name)}</span>
-        <span class="normal-score">${item.alcohol}</span>
+        <span class="normal-score">${formatAlcohol(item.alcohol)}</span>
       </div>
     `;
     restList.appendChild(li);
