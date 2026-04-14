@@ -111,6 +111,7 @@ p {
 }
 
 input,
+select,
 button {
   width: 100%;
   padding: 15px 16px;
@@ -121,13 +122,15 @@ button {
   transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
 
-input {
+input,
+select {
   background: rgba(255, 255, 255, 0.94);
   color: var(--dark-text);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
 }
 
-input:focus {
+input:focus,
+select:focus {
   outline: 2px solid rgba(251, 191, 36, 0.6);
   outline-offset: 1px;
 }
@@ -383,52 +386,7 @@ a:hover {
   min-height: 24px;
 }
 
-@media (max-width: 900px) {
-  .grid-2 {
-    grid-template-columns: 1fr;
-  }
-
-  .top-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-}
-
-@media (max-width: 760px) {
-  .container {
-    padding: 18px 14px 28px;
-  }
-
-  .card {
-    padding: 18px;
-    border-radius: 20px;
-  }
-
-  h1 {
-    font-size: 28px;
-  }
-
-  h2 {
-    font-size: 22px;
-  }
-
-  .podium {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .podium-card,
-  .place-1,
-  .place-2,
-  .place-3 {
-    min-height: auto;
-  }
-
-  .ranking-item {
-    flex-direction: row;
-    align-items: center;
-  }
-}
+/* Statistici premium */
 .stats-card {
   position: relative;
   overflow: hidden;
@@ -563,7 +521,128 @@ a:hover {
   }
 }
 
+/* Teme eveniment */
+.theme-party.party-bg {
+  background:
+    radial-gradient(circle at 12% 18%, rgba(255, 0, 128, 0.22) 0 4px, transparent 5px),
+    radial-gradient(circle at 78% 15%, rgba(0, 225, 255, 0.18) 0 5px, transparent 6px),
+    radial-gradient(circle at 24% 74%, rgba(255, 215, 0, 0.18) 0 5px, transparent 6px),
+    radial-gradient(circle at 84% 82%, rgba(0, 255, 170, 0.15) 0 4px, transparent 5px),
+    linear-gradient(135deg, #160f30 0%, #3b185f 45%, #6a1b4d 100%);
+}
+
+.theme-wedding.party-bg {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,0.24) 0 4px, transparent 5px),
+    radial-gradient(circle at 78% 24%, rgba(253, 230, 138, 0.22) 0 5px, transparent 6px),
+    radial-gradient(circle at 30% 78%, rgba(255,255,255,0.16) 0 4px, transparent 5px),
+    linear-gradient(135deg, #7c6f64 0%, #d6c3a5 45%, #f8f1e7 100%);
+}
+
+.theme-baptism.party-bg {
+  background:
+    radial-gradient(circle at 18% 20%, rgba(255,255,255,0.22) 0 4px, transparent 5px),
+    radial-gradient(circle at 80% 20%, rgba(147, 197, 253, 0.20) 0 5px, transparent 6px),
+    radial-gradient(circle at 30% 80%, rgba(191, 219, 254, 0.18) 0 4px, transparent 5px),
+    linear-gradient(135deg, #60a5fa 0%, #93c5fd 45%, #dbeafe 100%);
+}
+
+.theme-birthday.party-bg {
+  background:
+    radial-gradient(circle at 15% 22%, rgba(255, 99, 132, 0.20) 0 4px, transparent 5px),
+    radial-gradient(circle at 80% 18%, rgba(255, 206, 86, 0.18) 0 5px, transparent 6px),
+    radial-gradient(circle at 25% 78%, rgba(75, 192, 192, 0.18) 0 4px, transparent 5px),
+    radial-gradient(circle at 82% 82%, rgba(153, 102, 255, 0.18) 0 4px, transparent 5px),
+    linear-gradient(135deg, #7c2d12 0%, #ea580c 45%, #be185d 100%);
+}
+
+/* Text mai lizibil pe teme deschise */
+.theme-wedding {
+  color: #2c2c2c;
+}
+
+.theme-baptism {
+  color: #1f2937;
+}
+
+.theme-wedding .muted,
+.theme-baptism .muted {
+  color: rgba(31, 41, 55, 0.75);
+}
+
+.theme-wedding #event-title,
+.theme-baptism #event-title {
+  color: rgba(31, 41, 55, 0.82);
+}
+
+.theme-wedding a,
+.theme-baptism a {
+  color: #7c4a03;
+}
+
+.theme-wedding .event-item,
+.theme-baptism .event-item {
+  color: inherit;
+}
+
+.theme-wedding .podium-card,
+.theme-baptism .podium-card,
+.theme-wedding .ranking-item,
+.theme-baptism .ranking-item,
+.theme-wedding .stat-box,
+.theme-baptism .stat-box,
+.theme-wedding .link-box,
+.theme-baptism .link-box {
+  color: inherit;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .top-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
 @media (max-width: 760px) {
+  .container {
+    padding: 18px 14px 28px;
+  }
+
+  .card {
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  h1 {
+    font-size: 28px;
+  }
+
+  h2 {
+    font-size: 22px;
+  }
+
+  .podium {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .podium-card,
+  .place-1,
+  .place-2,
+  .place-3 {
+    min-height: auto;
+  }
+
+  .ranking-item {
+    flex-direction: row;
+    align-items: center;
+  }
+
   .stats-premium {
     grid-template-columns: 1fr;
   }

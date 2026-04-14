@@ -6,7 +6,7 @@
   <title>AlcoolTest Admin</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="party-bg">
+<body class="party-bg theme-party">
   <div id="admin-login" class="container small-container">
     <div class="card glass">
       <h1>🔐 Admin AlcoolTest</h1>
@@ -25,7 +25,16 @@
 
     <div class="card glass">
       <h2>Creează eveniment</h2>
+
       <input id="eventName" placeholder="Nume eveniment">
+
+      <select id="eventTheme">
+        <option value="party">Party</option>
+        <option value="wedding">Nuntă</option>
+        <option value="baptism">Botez</option>
+        <option value="birthday">Majorat / aniversare</option>
+      </select>
+
       <button id="createEventBtn">Creează eveniment</button>
       <p id="createMessage" class="muted"></p>
     </div>

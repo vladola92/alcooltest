@@ -49,6 +49,16 @@ function getEntryIdFromName(name) {
   return slugify(name);
 }
 
+function applyTheme(theme) {
+  document.body.classList.remove(
+    "theme-party",
+    "theme-wedding",
+    "theme-baptism",
+    "theme-birthday"
+  );
+  document.body.classList.add(`theme-${theme}`);
+}
+
 function loadEvent() {
   if (!eventId) {
     document.getElementById("event-title").innerText = "Link invalid. Lipsește evenimentul.";
@@ -64,7 +74,9 @@ function loadEvent() {
         return;
       }
 
-      document.getElementById("event-title").innerText = `Eveniment: ${doc.data().name}`;
+      const eventData = doc.data();
+      document.getElementById("event-title").innerText = `Eveniment: ${eventData.name}`;
+      applyTheme(eventData.theme || "party");
       listenToLeaderboard();
     })
     .catch((error) => {

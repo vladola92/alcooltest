@@ -56,6 +56,16 @@ function getGuestLink(eventId) {
   return `https://vladola92.github.io/alcooltest/guest.html?event=${eventId}`;
 }
 
+function applyTheme(theme) {
+  document.body.classList.remove(
+    "theme-party",
+    "theme-wedding",
+    "theme-baptism",
+    "theme-birthday"
+  );
+  document.body.classList.add(`theme-${theme}`);
+}
+
 function showAdminApp() {
   document.getElementById("admin-login").classList.add("hidden");
   document.getElementById("admin-app").classList.remove("hidden");
@@ -81,8 +91,11 @@ function loginAdmin() {
 
 function createEvent() {
   const input = document.getElementById("eventName");
+  const themeInput = document.getElementById("eventTheme");
   const message = document.getElementById("createMessage");
+
   const eventName = input.value.trim();
+  const eventTheme = themeInput.value;
 
   if (!eventName) {
     alert("Introdu numele evenimentului.");
@@ -98,6 +111,7 @@ function createEvent() {
     .set({
       name: eventName,
       slug: slugify(eventName),
+      theme: eventTheme,
       createdAt: Date.now()
     })
     .then(() => {
@@ -138,6 +152,7 @@ function listenToEvents() {
         btn.innerHTML = `
           <strong>${escapeHtml(item.name || item.id)}</strong>
           <span>${escapeHtml(item.id)}</span>
+          <span>Tema: ${escapeHtml(item.theme || "party")}</span>
         `;
         btn.addEventListener("click", () => selectEvent(item.id));
         list.appendChild(btn);
@@ -170,6 +185,7 @@ function selectEvent(eventId) {
       document.getElementById("eventLinkBox").innerHTML =
         `<a href="${currentGuestLink}" target="_blank">${currentGuestLink}</a>`;
 
+      applyTheme(data.theme || "party");
       renderQr(currentGuestLink);
       listenToEntries(eventId);
     })
