@@ -21,6 +21,7 @@ let previousLeaderName = null;
 let previousTop3Names = [];
 let recordBadgeTimeout = null;
 let leaderBadgeTimeout = null;
+let lastUpdatedId = null;
 
 function slugify(text) {
   return text
@@ -50,6 +51,14 @@ function formatAlcohol(value) {
 
 function getEntryIdFromName(name) {
   return slugify(name);
+}
+
+function getTitle(alcohol) {
+  if (alcohol === 0) return "🧊 Șoferul serii";
+  if (alcohol < 0.3) return "🙂 Încă ok";
+  if (alcohol < 0.7) return "😏 Începe distracția";
+  if (alcohol < 1.2) return "🔥 Pe val";
+  return "👑 Regele nopții";
 }
 
 function applyTheme(theme) {
@@ -127,6 +136,7 @@ function submitData() {
           alcohol,
           updatedAt: Date.now()
         }).then(() => {
+          lastUpdatedId = entryId;
           status.innerText = "Alcoolemia a fost actualizată pentru acest nume.";
           document.getElementById("name").value = "";
           document.getElementById("alcohol").value = "";
@@ -139,6 +149,7 @@ function submitData() {
         createdAt: Date.now(),
         updatedAt: Date.now()
       }).then(() => {
+        lastUpdatedId = entryId;
         status.innerText = "Rezultatul a fost adăugat.";
         document.getElementById("name").value = "";
         document.getElementById("alcohol").value = "";
@@ -191,12 +202,24 @@ function showNewRecordHighlight(newMax) {
     maxBox.classList.add("record-pulse");
   }
 
-  if (recordBadgeTimeout) clearTimeout(recordBadgeTimeout);
+  if (typeof confetti === "function") {
+    confetti({
+      particleCount: 120,
+      spread: 80,
+      origin: { y: 0.6 }
+    });
+  }
+
+  if (recordBadgeTimeout) {
+    clearTimeout(recordBadgeTimeout);
+  }
 
   recordBadgeTimeout = setTimeout(() => {
     badge.classList.remove("show-record");
     badge.classList.add("hidden");
-    if (maxBox) maxBox.classList.remove("record-pulse");
+    if (maxBox) {
+      maxBox.classList.remove("record-pulse");
+    }
   }, 3500);
 }
 
@@ -206,7 +229,9 @@ function showLeaderHighlight(name) {
   badge.classList.remove("hidden");
   badge.classList.add("show-record");
 
-  if (leaderBadgeTimeout) clearTimeout(leaderBadgeTimeout);
+  if (leaderBadgeTimeout) {
+    clearTimeout(leaderBadgeTimeout);
+  }
 
   leaderBadgeTimeout = setTimeout(() => {
     badge.classList.remove("show-record");
@@ -270,9 +295,9 @@ function renderGuestRanking(entries) {
   }
 
   const podiumItems = [
-    { person: second, place: 2, medal: "🥈", slot: 2 },
-    { person: first, place: 1, medal: "🥇", slot: 1 },
-    { person: third, place: 3, medal: "🥉", slot: 3 }
+    { person: second, place: 2, medal: "🥈" },
+    { person: first, place: 1, medal: "🥇" },
+    { person: third, place: 3, medal: "🥉" }
   ];
 
   podiumItems.forEach((item) => {
@@ -296,9 +321,16 @@ function renderGuestRanking(entries) {
       card.classList.add("leader-glow");
     }
 
+    if (item.person.id === lastUpdatedId) {
+      card.classList.add("new-entry-highlight");
+    }
+
     card.innerHTML = `
       <div class="place">${item.medal}</div>
-      <div class="name"><strong>${escapeHtml(item.person.name)}</strong></div>
+      <div class="name">
+        <strong>${escapeHtml(item.person.name)}</strong>
+        <div class="fun-title">${getTitle(item.person.alcohol)}</div>
+      </div>
       <div class="score"><strong>${formatAlcohol(item.person.alcohol)}</strong></div>
     `;
     podium.appendChild(card);
@@ -307,10 +339,16 @@ function renderGuestRanking(entries) {
   rest.forEach((item, idx) => {
     const li = document.createElement("li");
     li.className = "ranking-item";
+
+    if (item.id === lastUpdatedId) {
+      li.classList.add("new-entry-highlight");
+    }
+
     li.innerHTML = `
       <div>
         <span class="rank-number">${idx + 4}.</span>
         <span>${escapeHtml(item.name)}</span>
+        <div class="fun-title">${getTitle(item.alcohol)}</div>
         <span class="normal-score">${formatAlcohol(item.alcohol)}</span>
       </div>
     `;
