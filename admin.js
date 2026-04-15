@@ -148,19 +148,19 @@ function listenToEvents() {
 
       events.forEach((item) => {
         const row = document.createElement("div");
-        row.className = "event-row";
+        row.className = "event-row-card";
 
-        const btn = document.createElement("button");
-        btn.className = "event-item";
-        btn.innerHTML = `
+        const info = document.createElement("div");
+        info.className = "event-row-info";
+        info.innerHTML = `
           <strong>${escapeHtml(item.name || item.id)}</strong>
           <span>${escapeHtml(item.id)}</span>
           <span>Tema: ${escapeHtml(item.theme || "party")}</span>
         `;
-        btn.addEventListener("click", () => selectEvent(item.id));
+        info.addEventListener("click", () => selectEvent(item.id));
 
         const deleteBtn = document.createElement("button");
-        deleteBtn.className = "event-delete-btn";
+        deleteBtn.className = "trash-btn event-inline-delete";
         deleteBtn.innerHTML = "🗑️";
         deleteBtn.title = "Șterge evenimentul";
         deleteBtn.setAttribute("aria-label", "Șterge evenimentul");
@@ -169,7 +169,7 @@ function listenToEvents() {
           deleteEvent(item.id, item.name || item.id);
         });
 
-        row.appendChild(btn);
+        row.appendChild(info);
         row.appendChild(deleteBtn);
         list.appendChild(row);
       });

@@ -17,7 +17,10 @@ const params = new URLSearchParams(window.location.search);
 const eventId = params.get("event");
 
 let previousMaxAlcohol = null;
+let previousLeaderName = null;
+let previousTop3Names = [];
 let recordBadgeTimeout = null;
+let leaderBadgeTimeout = null;
 
 function slugify(text) {
   return text
@@ -188,16 +191,26 @@ function showNewRecordHighlight(newMax) {
     maxBox.classList.add("record-pulse");
   }
 
-  if (recordBadgeTimeout) {
-    clearTimeout(recordBadgeTimeout);
-  }
+  if (recordBadgeTimeout) clearTimeout(recordBadgeTimeout);
 
   recordBadgeTimeout = setTimeout(() => {
     badge.classList.remove("show-record");
     badge.classList.add("hidden");
-    if (maxBox) {
-      maxBox.classList.remove("record-pulse");
-    }
+    if (maxBox) maxBox.classList.remove("record-pulse");
+  }, 3500);
+}
+
+function showLeaderHighlight(name) {
+  const badge = document.getElementById("recordBadge");
+  badge.innerText = `👑 Lider nou: ${name}`;
+  badge.classList.remove("hidden");
+  badge.classList.add("show-record");
+
+  if (leaderBadgeTimeout) clearTimeout(leaderBadgeTimeout);
+
+  leaderBadgeTimeout = setTimeout(() => {
+    badge.classList.remove("show-record");
+    badge.classList.add("hidden");
   }, 3500);
 }
 
@@ -239,6 +252,8 @@ function renderGuestRanking(entries) {
 
   if (!entries.length) {
     podium.innerHTML = '<div class="podium-empty">Nu există încă rezultate.</div>';
+    previousLeaderName = null;
+    previousTop3Names = [];
     return;
   }
 
@@ -247,10 +262,17 @@ function renderGuestRanking(entries) {
   const third = entries[2] || null;
   const rest = entries.slice(3);
 
+  const currentLeaderName = first ? first.name : null;
+  const currentTop3Names = [first?.name || null, second?.name || null, third?.name || null];
+
+  if (previousLeaderName && currentLeaderName && previousLeaderName !== currentLeaderName) {
+    showLeaderHighlight(currentLeaderName);
+  }
+
   const podiumItems = [
-    { person: second, place: 2, medal: "🥈" },
-    { person: first, place: 1, medal: "🥇" },
-    { person: third, place: 3, medal: "🥉" }
+    { person: second, place: 2, medal: "🥈", slot: 2 },
+    { person: first, place: 1, medal: "🥇", slot: 1 },
+    { person: third, place: 3, medal: "🥉", slot: 3 }
   ];
 
   podiumItems.forEach((item) => {
@@ -264,6 +286,16 @@ function renderGuestRanking(entries) {
 
     const card = document.createElement("div");
     card.className = `podium-card place-${item.place}`;
+
+    const wasInTop3 = previousTop3Names.includes(item.person.name);
+    if (!wasInTop3) {
+      card.classList.add("podium-flash");
+    }
+
+    if (item.place === 1 && previousLeaderName && previousLeaderName !== item.person.name) {
+      card.classList.add("leader-glow");
+    }
+
     card.innerHTML = `
       <div class="place">${item.medal}</div>
       <div class="name"><strong>${escapeHtml(item.person.name)}</strong></div>
@@ -284,6 +316,9 @@ function renderGuestRanking(entries) {
     `;
     restList.appendChild(li);
   });
+
+  previousLeaderName = currentLeaderName;
+  previousTop3Names = currentTop3Names;
 }
 
 document.addEventListener("DOMContentLoaded", () => {
