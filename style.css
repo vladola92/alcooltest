@@ -655,3 +655,36 @@ a:hover {
     font-size: 28px;
   }
 }
+.event-row {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.event-row .event-item {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.event-delete-btn {
+  width: auto;
+  min-width: 54px;
+  padding: 0 14px;
+  margin-bottom: 0;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,0.16);
+  box-shadow: none;
+  font-size: 20px;
+}
+
+.event-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.22);
+  transform: translateY(-1px);
+}
+
+.theme-wedding .event-delete-btn,
+.theme-baptism .event-delete-btn {
+  color: inherit;
+}
