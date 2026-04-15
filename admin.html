@@ -47,13 +47,37 @@
 
       <div class="card glass">
         <h2>Detalii eveniment</h2>
+
         <p><strong>Nume:</strong> <span id="selectedEventName">-</span></p>
         <p><strong>Cod:</strong> <span id="selectedEventCode">-</span></p>
+        <p><strong>Status:</strong> <span id="selectedEventStatus">-</span></p>
+
         <p><strong>Link guest:</strong></p>
         <div id="eventLinkBox" class="link-box">-</div>
 
         <div class="button-row">
           <button id="copyLinkBtn">Copiază link</button>
+          <button id="shareWhatsappBtn">Trimite pe WhatsApp</button>
+        </div>
+
+        <div class="button-row">
+          <button id="exportCsvBtn">Export CSV</button>
+          <button id="toggleEventStatusBtn" class="secondary-btn">Finalizează evenimentul</button>
+        </div>
+
+        <div class="edit-event-box">
+          <h3>Editează evenimentul</h3>
+          <input id="editEventName" placeholder="Nume nou eveniment">
+          <select id="editEventTheme">
+            <option value="party">Party</option>
+            <option value="wedding">Nuntă</option>
+            <option value="baptism">Botez</option>
+            <option value="birthday">Majorat / aniversare</option>
+          </select>
+          <button id="saveEventChangesBtn">Salvează modificările</button>
+        </div>
+
+        <div class="button-row">
           <button id="resetBtn" class="danger">Resetează clasamentul</button>
         </div>
 

@@ -17,6 +17,7 @@ const ADMIN_PASSWORD = "alcooltest2026";
 
 let currentAdminEventId = null;
 let currentGuestLink = "";
+let currentEventData = null;
 let unsubscribeEntries = null;
 let unsubscribeEvents = null;
 
@@ -112,6 +113,7 @@ function createEvent() {
       name: eventName,
       slug: slugify(eventName),
       theme: eventTheme,
+      isFinalized: false,
       createdAt: Date.now()
     })
     .then(() => {
@@ -149,6 +151,9 @@ function listenToEvents() {
       events.forEach((item) => {
         const row = document.createElement("div");
         row.className = "event-row-card";
+        if (currentAdminEventId === item.id) {
+          row.classList.add("selected-event");
+        }
 
         const info = document.createElement("div");
         info.className = "event-row-info";
@@ -156,6 +161,7 @@ function listenToEvents() {
           <strong>${escapeHtml(item.name || item.id)}</strong>
           <span>${escapeHtml(item.id)}</span>
           <span>Tema: ${escapeHtml(item.theme || "party")}</span>
+          <span>Status: ${item.isFinalized ? "Finalizat" : "Activ"}</span>
         `;
         info.addEventListener("click", () => selectEvent(item.id));
 
@@ -194,16 +200,26 @@ function selectEvent(eventId) {
       }
 
       const data = doc.data();
+      currentEventData = data;
       currentGuestLink = getGuestLink(eventId);
 
       document.getElementById("selectedEventName").innerText = data.name || "-";
       document.getElementById("selectedEventCode").innerText = eventId;
+      document.getElementById("selectedEventStatus").innerText = data.isFinalized ? "Finalizat" : "Activ";
       document.getElementById("eventLinkBox").innerHTML =
         `<a href="${currentGuestLink}" target="_blank">${currentGuestLink}</a>`;
+
+      document.getElementById("editEventName").value = data.name || "";
+      document.getElementById("editEventTheme").value = data.theme || "party";
+
+      document.getElementById("toggleEventStatusBtn").innerText = data.isFinalized
+        ? "Redeschide evenimentul"
+        : "Finalizează evenimentul";
 
       applyTheme(data.theme || "party");
       renderQr(currentGuestLink);
       listenToEntries(eventId);
+      listenToEvents();
     })
     .catch((error) => {
       alert("Eroare la încărcarea evenimentului: " + error.message);
@@ -268,6 +284,120 @@ function copyGuestLink() {
     })
     .catch(() => {
       alert("Nu am putut copia linkul.");
+    });
+}
+
+function shareOnWhatsApp() {
+  if (!currentGuestLink) {
+    alert("Selectează mai întâi un eveniment.");
+    return;
+  }
+
+  const text = `Participă la clasamentul alcooltest: ${currentGuestLink}`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+}
+
+function exportCsv() {
+  if (!currentAdminEventId) {
+    alert("Selectează un eveniment.");
+    return;
+  }
+
+  db.collection("events")
+    .doc(currentAdminEventId)
+    .collection("entries")
+    .get()
+    .then((snapshot) => {
+      const rows = [["Pozitie", "Nume", "Alcoolemie"]];
+
+      const entries = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        entries.push({
+          name: data.name || "",
+          alcohol: Number(data.alcohol || 0),
+          updatedAt: Number(data.updatedAt || data.createdAt || 0)
+        });
+      });
+
+      entries.sort((a, b) => {
+        if (b.alcohol !== a.alcohol) return b.alcohol - a.alcohol;
+        return a.updatedAt - b.updatedAt;
+      });
+
+      entries.forEach((entry, index) => {
+        rows.push([index + 1, entry.name, formatAlcohol(entry.alcohol)]);
+      });
+
+      const csvContent = rows.map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(",")).join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${slugify(currentEventData?.name || "eveniment")}-rezultate.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    })
+    .catch((error) => {
+      console.error("exportCsv error:", error);
+      alert("Eroare la export: " + error.message);
+    });
+}
+
+function saveEventChanges() {
+  if (!currentAdminEventId) {
+    alert("Selectează un eveniment.");
+    return;
+  }
+
+  const newName = document.getElementById("editEventName").value.trim();
+  const newTheme = document.getElementById("editEventTheme").value;
+
+  if (!newName) {
+    alert("Introdu un nume valid.");
+    return;
+  }
+
+  db.collection("events")
+    .doc(currentAdminEventId)
+    .update({
+      name: newName,
+      theme: newTheme,
+      slug: slugify(newName)
+    })
+    .then(() => {
+      alert("Eveniment actualizat.");
+      selectEvent(currentAdminEventId);
+    })
+    .catch((error) => {
+      console.error("saveEventChanges error:", error);
+      alert("Eroare la actualizare: " + error.message);
+    });
+}
+
+function toggleEventStatus() {
+  if (!currentAdminEventId || !currentEventData) {
+    alert("Selectează un eveniment.");
+    return;
+  }
+
+  const newStatus = !currentEventData.isFinalized;
+
+  db.collection("events")
+    .doc(currentAdminEventId)
+    .update({
+      isFinalized: newStatus
+    })
+    .then(() => {
+      alert(newStatus ? "Evenimentul a fost finalizat." : "Evenimentul a fost redeschis.");
+      selectEvent(currentAdminEventId);
+    })
+    .catch((error) => {
+      console.error("toggleEventStatus error:", error);
+      alert("Eroare la schimbarea statusului: " + error.message);
     });
 }
 
@@ -373,9 +503,13 @@ function deleteEvent(eventId, eventName) {
       if (currentAdminEventId === eventId) {
         currentAdminEventId = null;
         currentGuestLink = "";
+        currentEventData = null;
         document.getElementById("selectedEventName").innerText = "-";
         document.getElementById("selectedEventCode").innerText = "-";
+        document.getElementById("selectedEventStatus").innerText = "-";
         document.getElementById("eventLinkBox").innerHTML = "-";
+        document.getElementById("editEventName").value = "";
+        document.getElementById("editEventTheme").value = "party";
         document.getElementById("adminPodium").innerHTML =
           '<div class="podium-empty">Selectează un eveniment</div>';
         document.getElementById("adminRestList").innerHTML = "";
@@ -383,6 +517,7 @@ function deleteEvent(eventId, eventName) {
       }
 
       alert("Evenimentul a fost șters.");
+      listenToEvents();
     })
     .catch((error) => {
       console.error("deleteEvent error:", error);
@@ -424,6 +559,10 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("logoutBtn").addEventListener("click", logoutAdmin);
   document.getElementById("createEventBtn").addEventListener("click", createEvent);
   document.getElementById("copyLinkBtn").addEventListener("click", copyGuestLink);
+  document.getElementById("shareWhatsappBtn").addEventListener("click", shareOnWhatsApp);
+  document.getElementById("exportCsvBtn").addEventListener("click", exportCsv);
+  document.getElementById("saveEventChangesBtn").addEventListener("click", saveEventChanges);
+  document.getElementById("toggleEventStatusBtn").addEventListener("click", toggleEventStatus);
   document.getElementById("resetBtn").addEventListener("click", resetLeaderboard);
 
   if (localStorage.getItem("alcooltest_admin_ok") === "yes") {

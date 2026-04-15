@@ -22,6 +22,7 @@ let previousTop3Names = [];
 let recordBadgeTimeout = null;
 let leaderBadgeTimeout = null;
 let lastUpdatedId = null;
+let isEventFinalized = false;
 
 function slugify(text) {
   return text
@@ -71,6 +72,19 @@ function applyTheme(theme) {
   document.body.classList.add(`theme-${theme}`);
 }
 
+function updateGuestAvailability() {
+  const formCard = document.getElementById("guestFormCard");
+  const closedBanner = document.getElementById("guestClosedBanner");
+
+  if (isEventFinalized) {
+    formCard.classList.add("hidden");
+    closedBanner.classList.remove("hidden");
+  } else {
+    formCard.classList.remove("hidden");
+    closedBanner.classList.add("hidden");
+  }
+}
+
 function loadEvent() {
   if (!eventId) {
     document.getElementById("event-title").innerText = "Link invalid. Lipsește evenimentul.";
@@ -79,23 +93,26 @@ function loadEvent() {
 
   db.collection("events")
     .doc(eventId)
-    .get()
-    .then((doc) => {
+    .onSnapshot((doc) => {
       if (!doc.exists) {
         document.getElementById("event-title").innerText = "Eveniment inexistent.";
         return;
       }
 
       const eventData = doc.data();
+      isEventFinalized = !!eventData.isFinalized;
+
       document.getElementById("event-title").innerText = `Eveniment: ${eventData.name}`;
       applyTheme(eventData.theme || "party");
+      updateGuestAvailability();
       listenToLeaderboard();
-    })
-    .catch((error) => {
+    }, (error) => {
       console.error(error);
       document.getElementById("event-title").innerText = "Eroare la încărcarea evenimentului.";
     });
 }
+
+let leaderboardSubscribed = false;
 
 function submitData() {
   const name = document.getElementById("name").value.trim();
@@ -105,6 +122,11 @@ function submitData() {
 
   if (!eventId) {
     alert("Eveniment invalid.");
+    return;
+  }
+
+  if (isEventFinalized) {
+    alert("Evenimentul este finalizat. Nu se mai pot introduce rezultate.");
     return;
   }
 
@@ -162,6 +184,9 @@ function submitData() {
 }
 
 function listenToLeaderboard() {
+  if (leaderboardSubscribed) return;
+  leaderboardSubscribed = true;
+
   db.collection("events")
     .doc(eventId)
     .collection("entries")
