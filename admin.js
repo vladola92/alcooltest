@@ -53,10 +53,6 @@ function formatAlcohol(value) {
   return Number(value || 0).toFixed(2);
 }
 
-function formatWithUnit(value, unit) {
-  return `${formatAlcohol(value)} ${unit || "mg/L"}`;
-}
-
 function getGuestLink(eventId) {
   return `https://vladola92.github.io/alcooltest/guest.html?event=${eventId}`;
 }
@@ -97,12 +93,10 @@ function loginAdmin() {
 function createEvent() {
   const input = document.getElementById("eventName");
   const themeInput = document.getElementById("eventTheme");
-  const unitInput = document.getElementById("eventUnit");
   const message = document.getElementById("createMessage");
 
   const eventName = input.value.trim();
   const eventTheme = themeInput.value;
-  const eventUnit = unitInput.value;
 
   if (!eventName) {
     alert("Introdu numele evenimentului.");
@@ -119,7 +113,6 @@ function createEvent() {
       name: eventName,
       slug: slugify(eventName),
       theme: eventTheme,
-      unit: eventUnit,
       isFinalized: false,
       createdAt: Date.now()
     })
@@ -135,50 +128,13 @@ function createEvent() {
     });
 }
 
-function renderEventCard(item, container) {
-  const row = document.createElement("div");
-  row.className = "event-row-card";
-
-  if (currentAdminEventId === item.id) {
-    row.classList.add("selected-event");
-  }
-
-  const info = document.createElement("div");
-  info.className = "event-row-info";
-  info.innerHTML = `
-    <strong>${escapeHtml(item.name || item.id)}</strong>
-    <span>${escapeHtml(item.id)}</span>
-    <span>Tema: ${escapeHtml(item.theme || "party")}</span>
-    <span>Unitate: ${escapeHtml(item.unit || "mg/L")}</span>
-    <span>Status: ${item.isFinalized ? "Finalizat" : "Activ"}</span>
-  `;
-  info.addEventListener("click", () => selectEvent(item.id));
-
-  const deleteBtn = document.createElement("button");
-  deleteBtn.className = "trash-btn event-inline-delete";
-  deleteBtn.innerHTML = "🗑️";
-  deleteBtn.title = "Șterge evenimentul";
-  deleteBtn.setAttribute("aria-label", "Șterge evenimentul");
-  deleteBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    deleteEvent(item.id, item.name || item.id);
-  });
-
-  row.appendChild(info);
-  row.appendChild(deleteBtn);
-  container.appendChild(row);
-}
-
 function listenToEvents() {
   if (unsubscribeEvents) unsubscribeEvents();
 
   unsubscribeEvents = db.collection("events").onSnapshot(
     (snapshot) => {
-      const activeList = document.getElementById("activeEventsList");
-      const finishedList = document.getElementById("finishedEventsList");
-
-      activeList.innerHTML = "";
-      finishedList.innerHTML = "";
+      const list = document.getElementById("eventsList");
+      list.innerHTML = "";
 
       const events = [];
       snapshot.forEach((doc) => {
@@ -187,20 +143,42 @@ function listenToEvents() {
 
       events.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
-      const activeEvents = events.filter(item => !item.isFinalized);
-      const finishedEvents = events.filter(item => !!item.isFinalized);
-
-      if (!activeEvents.length) {
-        activeList.innerHTML = '<div class="muted">Nu există evenimente active.</div>';
-      } else {
-        activeEvents.forEach((item) => renderEventCard(item, activeList));
+      if (!events.length) {
+        list.innerHTML = '<div class="muted">Nu există încă evenimente.</div>';
+        return;
       }
 
-      if (!finishedEvents.length) {
-        finishedList.innerHTML = '<div class="muted">Nu există evenimente finalizate.</div>';
-      } else {
-        finishedEvents.forEach((item) => renderEventCard(item, finishedList));
-      }
+      events.forEach((item) => {
+        const row = document.createElement("div");
+        row.className = "event-row-card";
+        if (currentAdminEventId === item.id) {
+          row.classList.add("selected-event");
+        }
+
+        const info = document.createElement("div");
+        info.className = "event-row-info";
+        info.innerHTML = `
+          <strong>${escapeHtml(item.name || item.id)}</strong>
+          <span>${escapeHtml(item.id)}</span>
+          <span>Tema: ${escapeHtml(item.theme || "party")}</span>
+          <span>Status: ${item.isFinalized ? "Finalizat" : "Activ"}</span>
+        `;
+        info.addEventListener("click", () => selectEvent(item.id));
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "trash-btn event-inline-delete";
+        deleteBtn.innerHTML = "🗑️";
+        deleteBtn.title = "Șterge evenimentul";
+        deleteBtn.setAttribute("aria-label", "Șterge evenimentul");
+        deleteBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          deleteEvent(item.id, item.name || item.id);
+        });
+
+        row.appendChild(info);
+        row.appendChild(deleteBtn);
+        list.appendChild(row);
+      });
     },
     (error) => {
       console.error("listenToEvents error:", error);
@@ -228,13 +206,11 @@ function selectEvent(eventId) {
       document.getElementById("selectedEventName").innerText = data.name || "-";
       document.getElementById("selectedEventCode").innerText = eventId;
       document.getElementById("selectedEventStatus").innerText = data.isFinalized ? "Finalizat" : "Activ";
-      document.getElementById("selectedEventUnit").innerText = data.unit || "mg/L";
       document.getElementById("eventLinkBox").innerHTML =
         `<a href="${currentGuestLink}" target="_blank">${currentGuestLink}</a>`;
 
       document.getElementById("editEventName").value = data.name || "";
       document.getElementById("editEventTheme").value = data.theme || "party";
-      document.getElementById("editEventUnit").value = data.unit || "mg/L";
 
       document.getElementById("toggleEventStatusBtn").innerText = data.isFinalized
         ? "Redeschide evenimentul"
@@ -321,20 +297,18 @@ function shareOnWhatsApp() {
   window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
 }
 
-function exportCsv() {
+function getSortedEntriesForCurrentEvent() {
   if (!currentAdminEventId) {
-    alert("Selectează un eveniment.");
-    return;
+    return Promise.reject(new Error("Nu este selectat niciun eveniment."));
   }
 
-  db.collection("events")
+  return db.collection("events")
     .doc(currentAdminEventId)
     .collection("entries")
     .get()
     .then((snapshot) => {
-      const rows = [["Pozitie", "Nume", `Alcoolemie (${currentEventData?.unit || "mg/L"})`]];
-
       const entries = [];
+
       snapshot.forEach((doc) => {
         const data = doc.data();
         entries.push({
@@ -349,28 +323,122 @@ function exportCsv() {
         return a.updatedAt - b.updatedAt;
       });
 
-      entries.forEach((entry, index) => {
-        rows.push([index + 1, entry.name, formatAlcohol(entry.alcohol)]);
-      });
+      return entries;
+    });
+}
 
-      const csvContent = rows
-        .map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(","))
-        .join("\n");
+function exportPdfReport() {
+  if (!currentAdminEventId || !currentEventData) {
+    alert("Selectează un eveniment.");
+    return;
+  }
 
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
+  getSortedEntriesForCurrentEvent()
+    .then((entries) => {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
 
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${slugify(currentEventData?.name || "eveniment")}-rezultate.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const left = 15;
+      let y = 18;
+
+      const totalParticipants = entries.length;
+      const totalAlcohol = entries.reduce((sum, item) => sum + item.alcohol, 0);
+      const avgAlcohol = totalParticipants ? totalAlcohol / totalParticipants : 0;
+      const maxAlcohol = totalParticipants ? entries[0].alcohol : 0;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(20);
+      doc.text("Raport AlcoolTest", left, y);
+
+      y += 10;
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Eveniment: ${currentEventData.name || "-"}`, left, y);
+
+      y += 7;
+      doc.text(`Cod eveniment: ${currentAdminEventId}`, left, y);
+
+      y += 7;
+      doc.text(`Tema: ${currentEventData.theme || "party"}`, left, y);
+
+      y += 7;
+      doc.text(`Status: ${currentEventData.isFinalized ? "Finalizat" : "Activ"}`, left, y);
+
+      y += 7;
+      doc.text(`Data export: ${new Date().toLocaleString("ro-RO")}`, left, y);
+
+      y += 12;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(15);
+      doc.text("Statistici", left, y);
+
+      y += 8;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(12);
+      doc.text(`Participanti: ${totalParticipants}`, left, y);
+
+      y += 7;
+      doc.text(`Media alcoolemiei: ${formatAlcohol(avgAlcohol)}`, left, y);
+
+      y += 7;
+      doc.text(`Cel mai mare scor: ${formatAlcohol(maxAlcohol)}`, left, y);
+
+      y += 12;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(15);
+      doc.text("Podium", left, y);
+
+      y += 8;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(12);
+
+      const first = entries[0];
+      const second = entries[1];
+      const third = entries[2];
+
+      doc.text(`🥇 Locul 1: ${first ? `${first.name} - ${formatAlcohol(first.alcohol)}` : "-"}`, left, y);
+      y += 7;
+      doc.text(`🥈 Locul 2: ${second ? `${second.name} - ${formatAlcohol(second.alcohol)}` : "-"}`, left, y);
+      y += 7;
+      doc.text(`🥉 Locul 3: ${third ? `${third.name} - ${formatAlcohol(third.alcohol)}` : "-"}`, left, y);
+
+      y += 12;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(15);
+      doc.text("Clasament complet", left, y);
+
+      y += 8;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+
+      if (!entries.length) {
+        doc.text("Nu exista participanti.", left, y);
+      } else {
+        entries.forEach((entry, index) => {
+          if (y > 275) {
+            doc.addPage();
+            y = 18;
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(15);
+            doc.text("Clasament complet (continuare)", left, y);
+            y += 8;
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(11);
+          }
+
+          const line = `${index + 1}. ${entry.name} - ${formatAlcohol(entry.alcohol)}`;
+          doc.text(line, left, y);
+          y += 7;
+        });
+      }
+
+      const fileName = `${slugify(currentEventData.name || "raport")}-raport.pdf`;
+      doc.save(fileName);
     })
     .catch((error) => {
-      console.error("exportCsv error:", error);
-      alert("Eroare la export: " + error.message);
+      console.error("exportPdfReport error:", error);
+      alert("Eroare la exportul PDF: " + error.message);
     });
 }
 
@@ -382,7 +450,6 @@ function saveEventChanges() {
 
   const newName = document.getElementById("editEventName").value.trim();
   const newTheme = document.getElementById("editEventTheme").value;
-  const newUnit = document.getElementById("editEventUnit").value;
 
   if (!newName) {
     alert("Introdu un nume valid.");
@@ -394,7 +461,6 @@ function saveEventChanges() {
     .update({
       name: newName,
       theme: newTheme,
-      unit: newUnit,
       slug: slugify(newName)
     })
     .then(() => {
@@ -433,7 +499,6 @@ function toggleEventStatus() {
 function renderAdminRanking(entries) {
   const podium = document.getElementById("adminPodium");
   const restList = document.getElementById("adminRestList");
-  const unit = currentEventData?.unit || "mg/L";
 
   podium.innerHTML = "";
   restList.innerHTML = "";
@@ -468,7 +533,7 @@ function renderAdminRanking(entries) {
     card.innerHTML = `
       <div class="place">${item.medal}</div>
       <div class="name"><strong>${escapeHtml(item.person.name)}</strong></div>
-      <div class="score"><strong>${formatWithUnit(item.person.alcohol, unit)}</strong></div>
+      <div class="score"><strong>${formatAlcohol(item.person.alcohol)}</strong></div>
       <button class="trash-btn" title="Șterge" aria-label="Șterge">🗑️</button>
     `;
 
@@ -483,7 +548,7 @@ function renderAdminRanking(entries) {
       <div>
         <span class="rank-number">${idx + 4}.</span>
         <span>${escapeHtml(item.name)}</span>
-        <span class="normal-score">${formatWithUnit(item.alcohol, unit)}</span>
+        <span class="normal-score">${formatAlcohol(item.alcohol)}</span>
       </div>
       <button class="trash-btn" title="Șterge" aria-label="Șterge">🗑️</button>
     `;
@@ -495,15 +560,6 @@ function renderAdminRanking(entries) {
 function deleteEntry(entryId) {
   if (!currentAdminEventId) {
     alert("Selectează un eveniment.");
-    return;
-  }
-
-  const confirmStep1 = confirm("Sigur vrei să ștergi acest participant?");
-  if (!confirmStep1) return;
-
-  const typed = prompt('Pentru confirmare, scrie: DELETE');
-  if (typed !== "DELETE") {
-    alert("Ștergerea a fost anulată.");
     return;
   }
 
@@ -519,14 +575,8 @@ function deleteEntry(entryId) {
 }
 
 function deleteEvent(eventId, eventName) {
-  const confirmStep1 = confirm(`Sigur vrei să ștergi evenimentul "${eventName}"?`);
-  if (!confirmStep1) return;
-
-  const typed = prompt(`Pentru confirmare, scrie exact numele evenimentului:\n${eventName}`);
-  if (typed !== eventName) {
-    alert("Ștergerea a fost anulată.");
-    return;
-  }
+  const ok = confirm(`Sigur vrei să ștergi evenimentul "${eventName}"?`);
+  if (!ok) return;
 
   db.collection("events")
     .doc(eventId)
@@ -534,9 +584,11 @@ function deleteEvent(eventId, eventName) {
     .get()
     .then((snapshot) => {
       const promises = [];
+
       snapshot.forEach((doc) => {
         promises.push(doc.ref.delete());
       });
+
       return Promise.all(promises);
     })
     .then(() => {
@@ -550,11 +602,9 @@ function deleteEvent(eventId, eventName) {
         document.getElementById("selectedEventName").innerText = "-";
         document.getElementById("selectedEventCode").innerText = "-";
         document.getElementById("selectedEventStatus").innerText = "-";
-        document.getElementById("selectedEventUnit").innerText = "-";
         document.getElementById("eventLinkBox").innerHTML = "-";
         document.getElementById("editEventName").value = "";
         document.getElementById("editEventTheme").value = "party";
-        document.getElementById("editEventUnit").value = "mg/L";
         document.getElementById("adminPodium").innerHTML =
           '<div class="podium-empty">Selectează un eveniment</div>';
         document.getElementById("adminRestList").innerHTML = "";
@@ -570,69 +620,19 @@ function deleteEvent(eventId, eventName) {
     });
 }
 
-function archiveCurrentLeaderboard(entries) {
-  const archiveRef = db.collection("events")
-    .doc(currentAdminEventId)
-    .collection("archives")
-    .doc(String(Date.now()));
-
-  return archiveRef.set({
-    archivedAt: Date.now(),
-    eventName: currentEventData?.name || "",
-    unit: currentEventData?.unit || "mg/L",
-    entries: entries.map((entry, index) => ({
-      position: index + 1,
-      name: entry.name,
-      alcohol: Number(entry.alcohol || 0),
-      updatedAt: Number(entry.updatedAt || 0)
-    }))
-  });
-}
-
 function resetLeaderboard() {
   if (!currentAdminEventId) {
     alert("Selectează un eveniment.");
     return;
   }
 
-  const confirmStep1 = confirm("Sigur vrei să resetezi clasamentul?");
-  if (!confirmStep1) return;
-
-  const typed = prompt('Pentru confirmare, scrie: RESET');
-  if (typed !== "RESET") {
-    alert("Resetarea a fost anulată.");
-    return;
-  }
+  const ok = confirm("Sigur vrei să resetezi clasamentul?");
+  if (!ok) return;
 
   db.collection("events")
     .doc(currentAdminEventId)
     .collection("entries")
     .get()
-    .then((snapshot) => {
-      const entries = [];
-
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        entries.push({
-          id: doc.id,
-          name: data.name || "",
-          alcohol: Number(data.alcohol || 0),
-          updatedAt: Number(data.updatedAt || data.createdAt || 0)
-        });
-      });
-
-      entries.sort((a, b) => {
-        if (b.alcohol !== a.alcohol) return b.alcohol - a.alcohol;
-        return a.updatedAt - b.updatedAt;
-      });
-
-      if (!entries.length) {
-        alert("Clasamentul este deja gol.");
-        return Promise.reject(new Error("EMPTY_LEADERBOARD"));
-      }
-
-      return archiveCurrentLeaderboard(entries).then(() => snapshot);
-    })
     .then((snapshot) => {
       const promises = [];
       snapshot.forEach((doc) => {
@@ -641,10 +641,9 @@ function resetLeaderboard() {
       return Promise.all(promises);
     })
     .then(() => {
-      alert("Clasamentul a fost resetat și salvat în arhivă.");
+      alert("Clasamentul a fost resetat.");
     })
     .catch((error) => {
-      if (error.message === "EMPTY_LEADERBOARD") return;
       alert("Eroare la resetare: " + error.message);
       console.error("resetLeaderboard error:", error);
     });
@@ -656,7 +655,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("createEventBtn").addEventListener("click", createEvent);
   document.getElementById("copyLinkBtn").addEventListener("click", copyGuestLink);
   document.getElementById("shareWhatsappBtn").addEventListener("click", shareOnWhatsApp);
-  document.getElementById("exportCsvBtn").addEventListener("click", exportCsv);
+  document.getElementById("exportPdfBtn").addEventListener("click", exportPdfReport);
   document.getElementById("saveEventChangesBtn").addEventListener("click", saveEventChanges);
   document.getElementById("toggleEventStatusBtn").addEventListener("click", toggleEventStatus);
   document.getElementById("resetBtn").addEventListener("click", resetLeaderboard);

@@ -35,23 +35,14 @@
         <option value="birthday">Majorat / aniversare</option>
       </select>
 
-      <select id="eventUnit">
-        <option value="mg/L">mg/L</option>
-      </select>
-
       <button id="createEventBtn">Creează eveniment</button>
       <p id="createMessage" class="muted"></p>
     </div>
 
     <div class="grid-2">
       <div class="card glass">
-        <h2>Evenimente active</h2>
-        <div id="activeEventsList" class="event-list"></div>
-
-        <div class="section-divider"></div>
-
-        <h2>Evenimente finalizate</h2>
-        <div id="finishedEventsList" class="event-list"></div>
+        <h2>Evenimente</h2>
+        <div id="eventsList" class="event-list"></div>
       </div>
 
       <div class="card glass">
@@ -60,7 +51,6 @@
         <p><strong>Nume:</strong> <span id="selectedEventName">-</span></p>
         <p><strong>Cod:</strong> <span id="selectedEventCode">-</span></p>
         <p><strong>Status:</strong> <span id="selectedEventStatus">-</span></p>
-        <p><strong>Unitate:</strong> <span id="selectedEventUnit">-</span></p>
 
         <p><strong>Link guest:</strong></p>
         <div id="eventLinkBox" class="link-box">-</div>
@@ -71,7 +61,7 @@
         </div>
 
         <div class="button-row">
-          <button id="exportCsvBtn">Export CSV</button>
+          <button id="exportPdfBtn">Export PDF raport</button>
           <button id="toggleEventStatusBtn" class="secondary-btn">Finalizează evenimentul</button>
         </div>
 
@@ -83,9 +73,6 @@
             <option value="wedding">Nuntă</option>
             <option value="baptism">Botez</option>
             <option value="birthday">Majorat / aniversare</option>
-          </select>
-          <select id="editEventUnit">
-            <option value="mg/L">mg/L</option>
           </select>
           <button id="saveEventChangesBtn">Salvează modificările</button>
         </div>
@@ -116,6 +103,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="admin.js"></script>
 </body>
 </html>
