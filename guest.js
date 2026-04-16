@@ -23,6 +23,7 @@ let recordBadgeTimeout = null;
 let leaderBadgeTimeout = null;
 let lastUpdatedId = null;
 let isEventFinalized = false;
+let currentUnit = "mg/L";
 
 function slugify(text) {
   return text
@@ -48,6 +49,10 @@ function escapeHtml(value) {
 
 function formatAlcohol(value) {
   return Number(value || 0).toFixed(2);
+}
+
+function formatWithUnit(value) {
+  return `${formatAlcohol(value)} ${currentUnit}`;
 }
 
 function getEntryIdFromName(name) {
@@ -101,6 +106,7 @@ function loadEvent() {
 
       const eventData = doc.data();
       isEventFinalized = !!eventData.isFinalized;
+      currentUnit = eventData.unit || "mg/L";
 
       document.getElementById("event-title").innerText = `Eveniment: ${eventData.name}`;
       applyTheme(eventData.theme || "party");
@@ -131,12 +137,12 @@ function submitData() {
   }
 
   if (!name || alcoholValue === "" || isNaN(alcohol)) {
-    alert("Completează toate câmpurile.");
+    alert(`Completează toate câmpurile (${currentUnit}).`);
     return;
   }
 
   if (alcohol < 0 || alcohol > 5) {
-    alert("Introdu o valoare validă pentru alcoolemie.");
+    alert(`Introdu o valoare validă pentru alcoolemie (${currentUnit}).`);
     return;
   }
 
@@ -159,7 +165,7 @@ function submitData() {
           updatedAt: Date.now()
         }).then(() => {
           lastUpdatedId = entryId;
-          status.innerText = "Alcoolemia a fost actualizată pentru acest nume.";
+          status.innerText = `Valoarea a fost actualizată (${currentUnit}).`;
           document.getElementById("name").value = "";
           document.getElementById("alcohol").value = "";
         });
@@ -172,7 +178,7 @@ function submitData() {
         updatedAt: Date.now()
       }).then(() => {
         lastUpdatedId = entryId;
-        status.innerText = "Rezultatul a fost adăugat.";
+        status.innerText = `Rezultatul a fost adăugat (${currentUnit}).`;
         document.getElementById("name").value = "";
         document.getElementById("alcohol").value = "";
       });
@@ -219,7 +225,7 @@ function showNewRecordHighlight(newMax) {
   const badge = document.getElementById("recordBadge");
   const maxBox = document.querySelector(".max-box");
 
-  badge.innerText = `🔥 Record nou: ${formatAlcohol(newMax)}`;
+  badge.innerText = `🔥 Record nou: ${formatWithUnit(newMax)}`;
   badge.classList.remove("hidden");
   badge.classList.add("show-record");
 
@@ -281,8 +287,8 @@ function updateStats(entries) {
   const avg = count ? total / count : 0;
 
   document.getElementById("statCount").innerText = count;
-  document.getElementById("statAvg").innerText = avg.toFixed(2);
-  document.getElementById("statMax").innerText = max.toFixed(2);
+  document.getElementById("statAvg").innerText = formatWithUnit(avg);
+  document.getElementById("statMax").innerText = formatWithUnit(max);
 
   if (previousMaxAlcohol !== null && max > previousMaxAlcohol) {
     showNewRecordHighlight(max);
@@ -356,7 +362,7 @@ function renderGuestRanking(entries) {
         <strong>${escapeHtml(item.person.name)}</strong>
         <div class="fun-title">${getTitle(item.person.alcohol)}</div>
       </div>
-      <div class="score"><strong>${formatAlcohol(item.person.alcohol)}</strong></div>
+      <div class="score"><strong>${formatWithUnit(item.person.alcohol)}</strong></div>
     `;
     podium.appendChild(card);
   });
@@ -374,7 +380,7 @@ function renderGuestRanking(entries) {
         <span class="rank-number">${idx + 4}.</span>
         <span>${escapeHtml(item.name)}</span>
         <div class="fun-title">${getTitle(item.alcohol)}</div>
-        <span class="normal-score">${formatAlcohol(item.alcohol)}</span>
+        <span class="normal-score">${formatWithUnit(item.alcohol)}</span>
       </div>
     `;
     restList.appendChild(li);

@@ -53,6 +53,10 @@ function formatAlcohol(value) {
   return Number(value || 0).toFixed(2);
 }
 
+function formatWithUnit(value, unit) {
+  return `${formatAlcohol(value)} ${unit || "mg/L"}`;
+}
+
 function getGuestLink(eventId) {
   return `https://vladola92.github.io/alcooltest/guest.html?event=${eventId}`;
 }
@@ -93,10 +97,12 @@ function loginAdmin() {
 function createEvent() {
   const input = document.getElementById("eventName");
   const themeInput = document.getElementById("eventTheme");
+  const unitInput = document.getElementById("eventUnit");
   const message = document.getElementById("createMessage");
 
   const eventName = input.value.trim();
   const eventTheme = themeInput.value;
+  const eventUnit = unitInput.value;
 
   if (!eventName) {
     alert("Introdu numele evenimentului.");
@@ -113,6 +119,7 @@ function createEvent() {
       name: eventName,
       slug: slugify(eventName),
       theme: eventTheme,
+      unit: eventUnit,
       isFinalized: false,
       createdAt: Date.now()
     })
@@ -142,6 +149,7 @@ function renderEventCard(item, container) {
     <strong>${escapeHtml(item.name || item.id)}</strong>
     <span>${escapeHtml(item.id)}</span>
     <span>Tema: ${escapeHtml(item.theme || "party")}</span>
+    <span>Unitate: ${escapeHtml(item.unit || "mg/L")}</span>
     <span>Status: ${item.isFinalized ? "Finalizat" : "Activ"}</span>
   `;
   info.addEventListener("click", () => selectEvent(item.id));
@@ -220,11 +228,13 @@ function selectEvent(eventId) {
       document.getElementById("selectedEventName").innerText = data.name || "-";
       document.getElementById("selectedEventCode").innerText = eventId;
       document.getElementById("selectedEventStatus").innerText = data.isFinalized ? "Finalizat" : "Activ";
+      document.getElementById("selectedEventUnit").innerText = data.unit || "mg/L";
       document.getElementById("eventLinkBox").innerHTML =
         `<a href="${currentGuestLink}" target="_blank">${currentGuestLink}</a>`;
 
       document.getElementById("editEventName").value = data.name || "";
       document.getElementById("editEventTheme").value = data.theme || "party";
+      document.getElementById("editEventUnit").value = data.unit || "mg/L";
 
       document.getElementById("toggleEventStatusBtn").innerText = data.isFinalized
         ? "Redeschide evenimentul"
@@ -322,7 +332,7 @@ function exportCsv() {
     .collection("entries")
     .get()
     .then((snapshot) => {
-      const rows = [["Pozitie", "Nume", "Alcoolemie"]];
+      const rows = [["Pozitie", "Nume", `Alcoolemie (${currentEventData?.unit || "mg/L"})`]];
 
       const entries = [];
       snapshot.forEach((doc) => {
@@ -372,6 +382,7 @@ function saveEventChanges() {
 
   const newName = document.getElementById("editEventName").value.trim();
   const newTheme = document.getElementById("editEventTheme").value;
+  const newUnit = document.getElementById("editEventUnit").value;
 
   if (!newName) {
     alert("Introdu un nume valid.");
@@ -383,6 +394,7 @@ function saveEventChanges() {
     .update({
       name: newName,
       theme: newTheme,
+      unit: newUnit,
       slug: slugify(newName)
     })
     .then(() => {
@@ -421,6 +433,7 @@ function toggleEventStatus() {
 function renderAdminRanking(entries) {
   const podium = document.getElementById("adminPodium");
   const restList = document.getElementById("adminRestList");
+  const unit = currentEventData?.unit || "mg/L";
 
   podium.innerHTML = "";
   restList.innerHTML = "";
@@ -455,7 +468,7 @@ function renderAdminRanking(entries) {
     card.innerHTML = `
       <div class="place">${item.medal}</div>
       <div class="name"><strong>${escapeHtml(item.person.name)}</strong></div>
-      <div class="score"><strong>${formatAlcohol(item.person.alcohol)}</strong></div>
+      <div class="score"><strong>${formatWithUnit(item.person.alcohol, unit)}</strong></div>
       <button class="trash-btn" title="Șterge" aria-label="Șterge">🗑️</button>
     `;
 
@@ -470,7 +483,7 @@ function renderAdminRanking(entries) {
       <div>
         <span class="rank-number">${idx + 4}.</span>
         <span>${escapeHtml(item.name)}</span>
-        <span class="normal-score">${formatAlcohol(item.alcohol)}</span>
+        <span class="normal-score">${formatWithUnit(item.alcohol, unit)}</span>
       </div>
       <button class="trash-btn" title="Șterge" aria-label="Șterge">🗑️</button>
     `;
@@ -482,6 +495,15 @@ function renderAdminRanking(entries) {
 function deleteEntry(entryId) {
   if (!currentAdminEventId) {
     alert("Selectează un eveniment.");
+    return;
+  }
+
+  const confirmStep1 = confirm("Sigur vrei să ștergi acest participant?");
+  if (!confirmStep1) return;
+
+  const typed = prompt('Pentru confirmare, scrie: DELETE');
+  if (typed !== "DELETE") {
+    alert("Ștergerea a fost anulată.");
     return;
   }
 
@@ -497,8 +519,14 @@ function deleteEntry(entryId) {
 }
 
 function deleteEvent(eventId, eventName) {
-  const ok = confirm(`Sigur vrei să ștergi evenimentul "${eventName}"?`);
-  if (!ok) return;
+  const confirmStep1 = confirm(`Sigur vrei să ștergi evenimentul "${eventName}"?`);
+  if (!confirmStep1) return;
+
+  const typed = prompt(`Pentru confirmare, scrie exact numele evenimentului:\n${eventName}`);
+  if (typed !== eventName) {
+    alert("Ștergerea a fost anulată.");
+    return;
+  }
 
   db.collection("events")
     .doc(eventId)
@@ -506,11 +534,9 @@ function deleteEvent(eventId, eventName) {
     .get()
     .then((snapshot) => {
       const promises = [];
-
       snapshot.forEach((doc) => {
         promises.push(doc.ref.delete());
       });
-
       return Promise.all(promises);
     })
     .then(() => {
@@ -524,9 +550,11 @@ function deleteEvent(eventId, eventName) {
         document.getElementById("selectedEventName").innerText = "-";
         document.getElementById("selectedEventCode").innerText = "-";
         document.getElementById("selectedEventStatus").innerText = "-";
+        document.getElementById("selectedEventUnit").innerText = "-";
         document.getElementById("eventLinkBox").innerHTML = "-";
         document.getElementById("editEventName").value = "";
         document.getElementById("editEventTheme").value = "party";
+        document.getElementById("editEventUnit").value = "mg/L";
         document.getElementById("adminPodium").innerHTML =
           '<div class="podium-empty">Selectează un eveniment</div>';
         document.getElementById("adminRestList").innerHTML = "";
@@ -542,19 +570,69 @@ function deleteEvent(eventId, eventName) {
     });
 }
 
+function archiveCurrentLeaderboard(entries) {
+  const archiveRef = db.collection("events")
+    .doc(currentAdminEventId)
+    .collection("archives")
+    .doc(String(Date.now()));
+
+  return archiveRef.set({
+    archivedAt: Date.now(),
+    eventName: currentEventData?.name || "",
+    unit: currentEventData?.unit || "mg/L",
+    entries: entries.map((entry, index) => ({
+      position: index + 1,
+      name: entry.name,
+      alcohol: Number(entry.alcohol || 0),
+      updatedAt: Number(entry.updatedAt || 0)
+    }))
+  });
+}
+
 function resetLeaderboard() {
   if (!currentAdminEventId) {
     alert("Selectează un eveniment.");
     return;
   }
 
-  const ok = confirm("Sigur vrei să resetezi clasamentul?");
-  if (!ok) return;
+  const confirmStep1 = confirm("Sigur vrei să resetezi clasamentul?");
+  if (!confirmStep1) return;
+
+  const typed = prompt('Pentru confirmare, scrie: RESET');
+  if (typed !== "RESET") {
+    alert("Resetarea a fost anulată.");
+    return;
+  }
 
   db.collection("events")
     .doc(currentAdminEventId)
     .collection("entries")
     .get()
+    .then((snapshot) => {
+      const entries = [];
+
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        entries.push({
+          id: doc.id,
+          name: data.name || "",
+          alcohol: Number(data.alcohol || 0),
+          updatedAt: Number(data.updatedAt || data.createdAt || 0)
+        });
+      });
+
+      entries.sort((a, b) => {
+        if (b.alcohol !== a.alcohol) return b.alcohol - a.alcohol;
+        return a.updatedAt - b.updatedAt;
+      });
+
+      if (!entries.length) {
+        alert("Clasamentul este deja gol.");
+        return Promise.reject(new Error("EMPTY_LEADERBOARD"));
+      }
+
+      return archiveCurrentLeaderboard(entries).then(() => snapshot);
+    })
     .then((snapshot) => {
       const promises = [];
       snapshot.forEach((doc) => {
@@ -563,9 +641,10 @@ function resetLeaderboard() {
       return Promise.all(promises);
     })
     .then(() => {
-      alert("Clasamentul a fost resetat.");
+      alert("Clasamentul a fost resetat și salvat în arhivă.");
     })
     .catch((error) => {
+      if (error.message === "EMPTY_LEADERBOARD") return;
       alert("Eroare la resetare: " + error.message);
       console.error("resetLeaderboard error:", error);
     });

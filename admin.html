@@ -35,6 +35,10 @@
         <option value="birthday">Majorat / aniversare</option>
       </select>
 
+      <select id="eventUnit">
+        <option value="mg/L">mg/L</option>
+      </select>
+
       <button id="createEventBtn">Creează eveniment</button>
       <p id="createMessage" class="muted"></p>
     </div>
@@ -56,6 +60,7 @@
         <p><strong>Nume:</strong> <span id="selectedEventName">-</span></p>
         <p><strong>Cod:</strong> <span id="selectedEventCode">-</span></p>
         <p><strong>Status:</strong> <span id="selectedEventStatus">-</span></p>
+        <p><strong>Unitate:</strong> <span id="selectedEventUnit">-</span></p>
 
         <p><strong>Link guest:</strong></p>
         <div id="eventLinkBox" class="link-box">-</div>
@@ -78,6 +83,9 @@
             <option value="wedding">Nuntă</option>
             <option value="baptism">Botez</option>
             <option value="birthday">Majorat / aniversare</option>
+          </select>
+          <select id="editEventUnit">
+            <option value="mg/L">mg/L</option>
           </select>
           <button id="saveEventChangesBtn">Salvează modificările</button>
         </div>
