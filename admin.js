@@ -14,6 +14,7 @@ if (!firebase.apps.length) {
 const db = firebase.firestore();
 
 const ADMIN_PASSWORD = "alcooltest2026";
+const ALCOHOL_UNIT = "mg/L";
 
 let currentAdminEventId = null;
 let currentGuestLink = "";
@@ -69,6 +70,10 @@ function escapeHtml(value) {
 
 function formatAlcohol(value) {
   return Number(value || 0).toFixed(2);
+}
+
+function formatAlcoholWithUnit(value) {
+  return `${formatAlcohol(value)} ${ALCOHOL_UNIT}`;
 }
 
 function getGuestLink(eventId) {
@@ -375,7 +380,6 @@ function exportPdfReport() {
       const second = entries[1] || null;
       const third = entries[2] || null;
 
-      // Header premium
       doc.setFillColor(34, 24, 72);
       drawRoundedRect(doc, 12, 10, pageWidth - 24, 24, 6, "F");
 
@@ -386,7 +390,6 @@ function exportPdfReport() {
 
       y = 44;
 
-      // Event info
       doc.setTextColor(30, 30, 30);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(14);
@@ -409,7 +412,6 @@ function exportPdfReport() {
       y += 7;
       doc.text(`Data export: ${stripDiacritics(new Date().toLocaleString("ro-RO"))}`, left, y);
 
-      // Stats box
       y += 12;
       doc.setFillColor(248, 249, 252);
       doc.setDrawColor(224, 224, 224);
@@ -422,12 +424,11 @@ function exportPdfReport() {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
       doc.text(`Participanti: ${totalParticipants}`, left + 5, y + 17);
-      doc.text(`Media alcoolemiei: ${formatAlcohol(avgAlcohol)}`, left + 62, y + 17);
-      doc.text(`Scor maxim: ${formatAlcohol(maxAlcohol)}`, left + 140, y + 17);
+      doc.text(`Media alcoolemiei: ${formatAlcoholWithUnit(avgAlcohol)}`, left + 62, y + 17);
+      doc.text(`Scor maxim: ${formatAlcoholWithUnit(maxAlcohol)}`, left + 140, y + 17);
 
       y += 46;
 
-      // Podium elegant
       doc.setFont("helvetica", "bold");
       doc.setFontSize(14);
       doc.text("Podium", left, y);
@@ -462,7 +463,7 @@ function exportPdfReport() {
         doc.setFontSize(10);
 
         const podiumName = item.person ? stripDiacritics(item.person.name) : "-";
-        const podiumScore = item.person ? formatAlcohol(item.person.alcohol) : "-";
+        const podiumScore = item.person ? formatAlcoholWithUnit(item.person.alcohol) : "-";
 
         doc.text(podiumName, item.x + 4, yBox + 18, { maxWidth: boxWidth - 8 });
         doc.text(`Scor: ${podiumScore}`, item.x + 4, yBox + 27);
@@ -470,7 +471,6 @@ function exportPdfReport() {
 
       y += 52;
 
-      // Full ranking
       doc.setTextColor(30, 30, 30);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(14);
@@ -506,13 +506,12 @@ function exportPdfReport() {
           doc.setFontSize(11);
           doc.text(`${index + 1}.`, left, y + 8);
           doc.text(stripDiacritics(entry.name), left + 12, y + 8, { maxWidth: 120 });
-          doc.text(formatAlcohol(entry.alcohol), right - 18, y + 8, { align: "right" });
+          doc.text(formatAlcoholWithUnit(entry.alcohol), right - 18, y + 8, { align: "right" });
 
           y += 12;
         });
       }
 
-      // Footer
       const totalPages = doc.getNumberOfPages();
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
