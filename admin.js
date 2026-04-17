@@ -327,6 +327,10 @@ function getSortedEntriesForCurrentEvent() {
     });
 }
 
+function drawRoundedRect(doc, x, y, w, h, r, style = "S") {
+  doc.roundedRect(x, y, w, h, r, r, style);
+}
+
 function exportPdfReport() {
   if (!currentAdminEventId || !currentEventData) {
     alert("Selectează un eveniment.");
@@ -339,7 +343,9 @@ function exportPdfReport() {
       const doc = new jsPDF();
 
       const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
       const left = 15;
+      const right = pageWidth - 15;
       let y = 18;
 
       const totalParticipants = entries.length;
@@ -347,93 +353,167 @@ function exportPdfReport() {
       const avgAlcohol = totalParticipants ? totalAlcohol / totalParticipants : 0;
       const maxAlcohol = totalParticipants ? entries[0].alcohol : 0;
 
+      const first = entries[0] || null;
+      const second = entries[1] || null;
+      const third = entries[2] || null;
+
+      // Header premium
+      doc.setFillColor(34, 24, 72);
+      drawRoundedRect(doc, 12, 10, pageWidth - 24, 28, 6, "F");
+
+      doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(20);
-      doc.text("Raport AlcoolTest", left, y);
+      doc.text("RAPORT ALCOOLTEST", left + 4, 22);
 
-      y += 10;
-      doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
-      doc.text(`Eveniment: ${currentEventData.name || "-"}`, left, y);
+      doc.setFontSize(10);
+      doc.text("Rezumat elegant al evenimentului", left + 4, 29);
 
-      y += 7;
-      doc.text(`Cod eveniment: ${currentAdminEventId}`, left, y);
+      y = 48;
 
-      y += 7;
-      doc.text(`Tema: ${currentEventData.theme || "party"}`, left, y);
-
-      y += 7;
-      doc.text(`Status: ${currentEventData.isFinalized ? "Finalizat" : "Activ"}`, left, y);
-
-      y += 7;
-      doc.text(`Data export: ${new Date().toLocaleString("ro-RO")}`, left, y);
-
-      y += 12;
+      // Event info
+      doc.setTextColor(30, 30, 30);
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(15);
-      doc.text("Statistici", left, y);
+      doc.setFontSize(14);
+      doc.text("Detalii eveniment", left, y);
 
-      y += 8;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(12);
-      doc.text(`Participanti: ${totalParticipants}`, left, y);
-
-      y += 7;
-      doc.text(`Media alcoolemiei: ${formatAlcohol(avgAlcohol)}`, left, y);
-
-      y += 7;
-      doc.text(`Cel mai mare scor: ${formatAlcohol(maxAlcohol)}`, left, y);
-
-      y += 12;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(15);
-      doc.text("Podium", left, y);
-
-      y += 8;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(12);
-
-      const first = entries[0];
-      const second = entries[1];
-      const third = entries[2];
-
-      doc.text(`🥇 Locul 1: ${first ? `${first.name} - ${formatAlcohol(first.alcohol)}` : "-"}`, left, y);
-      y += 7;
-      doc.text(`🥈 Locul 2: ${second ? `${second.name} - ${formatAlcohol(second.alcohol)}` : "-"}`, left, y);
-      y += 7;
-      doc.text(`🥉 Locul 3: ${third ? `${third.name} - ${formatAlcohol(third.alcohol)}` : "-"}`, left, y);
-
-      y += 12;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(15);
-      doc.text("Clasament complet", left, y);
+      y += 6;
+      doc.setDrawColor(220, 220, 220);
+      doc.line(left, y, right, y);
 
       y += 8;
       doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
+      doc.text(`Nume: ${currentEventData.name || "-"}`, left, y);
+      y += 7;
+      doc.text(`Cod: ${currentAdminEventId}`, left, y);
+      y += 7;
+      doc.text(`Tema: ${currentEventData.theme || "party"}`, left, y);
+      y += 7;
+      doc.text(`Status: ${currentEventData.isFinalized ? "Finalizat" : "Activ"}`, left, y);
+      y += 7;
+      doc.text(`Data export: ${new Date().toLocaleString("ro-RO")}`, left, y);
+
+      // Stats box
+      y += 12;
+      doc.setFillColor(248, 249, 252);
+      doc.setDrawColor(224, 224, 224);
+      drawRoundedRect(doc, left, y, pageWidth - 30, 34, 4, "FD");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.text("Statistici", left + 5, y + 8);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.text(`Participanți: ${totalParticipants}`, left + 5, y + 17);
+      doc.text(`Media alcoolemiei: ${formatAlcohol(avgAlcohol)}`, left + 62, y + 17);
+      doc.text(`Scor maxim: ${formatAlcohol(maxAlcohol)}`, left + 140, y + 17);
+
+      y += 46;
+
+      // Podium elegant
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text("Podium", left, y);
+
+      y += 8;
+
+      const boxWidth = 55;
+      const gap = 7;
+      const startX = left;
+      const boxY = y;
+      const heights = [32, 42, 28];
+      const podiumData = [
+        { label: "Locul 2", person: second, fill: [226, 232, 240], x: startX },
+        { label: "Locul 1", person: first, fill: [253, 224, 71], x: startX + boxWidth + gap },
+        { label: "Locul 3", person: third, fill: [251, 191, 36], x: startX + (boxWidth + gap) * 2 }
+      ];
+
+      podiumData.forEach((item, index) => {
+        const h = heights[index];
+        const yBox = boxY + (42 - h);
+
+        doc.setFillColor(...item.fill);
+        doc.setDrawColor(210, 210, 210);
+        drawRoundedRect(doc, item.x, yBox, boxWidth, h, 4, "FD");
+
+        doc.setTextColor(35, 35, 35);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.text(item.label, item.x + 4, yBox + 8);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+
+        const podiumName = item.person ? item.person.name : "-";
+        const podiumScore = item.person ? formatAlcohol(item.person.alcohol) : "-";
+
+        doc.text(podiumName, item.x + 4, yBox + 18, { maxWidth: boxWidth - 8 });
+        doc.text(`Scor: ${podiumScore}`, item.x + 4, yBox + 27);
+      });
+
+      y += 52;
+
+      // Full ranking
+      doc.setTextColor(30, 30, 30);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text("Clasament complet", left, y);
+
+      y += 8;
 
       if (!entries.length) {
-        doc.text("Nu exista participanti.", left, y);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+        doc.text("Nu există participanți.", left, y);
       } else {
         entries.forEach((entry, index) => {
-          if (y > 275) {
+          if (y > pageHeight - 18) {
             doc.addPage();
             y = 18;
+
+            doc.setFillColor(34, 24, 72);
+            drawRoundedRect(doc, 12, 10, pageWidth - 24, 16, 4, "F");
+            doc.setTextColor(255, 255, 255);
             doc.setFont("helvetica", "bold");
-            doc.setFontSize(15);
-            doc.text("Clasament complet (continuare)", left, y);
-            y += 8;
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(11);
+            doc.setFontSize(12);
+            doc.text("Clasament complet - continuare", 18, 20);
+
+            y = 34;
+            doc.setTextColor(30, 30, 30);
           }
 
-          const line = `${index + 1}. ${entry.name} - ${formatAlcohol(entry.alcohol)}`;
-          doc.text(line, left, y);
-          y += 7;
+          doc.setDrawColor(235, 235, 235);
+          doc.line(left, y + 2, right, y + 2);
+
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(11);
+          doc.text(`${index + 1}.`, left, y + 8);
+          doc.text(entry.name, left + 12, y + 8, { maxWidth: 120 });
+          doc.text(formatAlcohol(entry.alcohol), right - 18, y + 8, { align: "right" });
+
+          y += 12;
         });
       }
 
-      const fileName = `${slugify(currentEventData.name || "raport")}-raport.pdf`;
+      // Footer
+      const totalPages = doc.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setTextColor(120, 120, 120);
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(9);
+        doc.text(
+          `Generat de AlcoolTest • Pagina ${i}/${totalPages}`,
+          pageWidth / 2,
+          pageHeight - 8,
+          { align: "center" }
+        );
+      }
+
+      const fileName = `${slugify(currentEventData.name || "raport")}-raport-elegant.pdf`;
       doc.save(fileName);
     })
     .catch((error) => {
