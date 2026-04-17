@@ -14,6 +14,30 @@
       <p id="event-title">Se încarcă evenimentul...</p>
     </div>
 
+    <div class="card glass share-card">
+      <div class="share-header">
+        <div>
+          <h2>📲 Invită și alți participanți</h2>
+          <p class="muted">Scanează sau trimite mai departe linkul evenimentului.</p>
+        </div>
+      </div>
+
+      <div class="share-grid">
+        <div class="guest-qr-box">
+          <div id="guestQrcode"></div>
+        </div>
+
+        <div class="share-actions">
+          <div id="guestLinkBox" class="link-box">Se încarcă linkul...</div>
+
+          <div class="button-row">
+            <button id="copyGuestEventLinkBtn">Copiază link</button>
+            <button id="shareGuestWhatsappBtn">Trimite pe WhatsApp</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="guestClosedBanner" class="card glass hidden">
       <h2>🏁 Eveniment finalizat</h2>
       <p>Acest eveniment a fost închis. Clasamentul rămâne vizibil, dar nu se mai pot introduce rezultate noi.</p>
@@ -76,6 +100,7 @@
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <script src="guest.js"></script>
 </body>

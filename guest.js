@@ -23,7 +23,7 @@ let recordBadgeTimeout = null;
 let leaderBadgeTimeout = null;
 let lastUpdatedId = null;
 let isEventFinalized = false;
-let currentUnit = "mg/L";
+let currentShareLink = "";
 
 function slugify(text) {
   return text
@@ -49,10 +49,6 @@ function escapeHtml(value) {
 
 function formatAlcohol(value) {
   return Number(value || 0).toFixed(2);
-}
-
-function formatWithUnit(value) {
-  return `${formatAlcohol(value)} ${currentUnit}`;
 }
 
 function getEntryIdFromName(name) {
@@ -90,11 +86,52 @@ function updateGuestAvailability() {
   }
 }
 
+function renderGuestQr(link) {
+  const qrBox = document.getElementById("guestQrcode");
+  qrBox.innerHTML = "";
+
+  new QRCode(qrBox, {
+    text: link,
+    width: 160,
+    height: 160
+  });
+}
+
+function copyGuestEventLink() {
+  if (!currentShareLink) {
+    alert("Linkul nu este încă disponibil.");
+    return;
+  }
+
+  navigator.clipboard.writeText(currentShareLink)
+    .then(() => {
+      alert("Link copiat.");
+    })
+    .catch(() => {
+      alert("Nu am putut copia linkul.");
+    });
+}
+
+function shareGuestOnWhatsApp() {
+  if (!currentShareLink) {
+    alert("Linkul nu este încă disponibil.");
+    return;
+  }
+
+  const text = `Intră în clasamentul alcooltest: ${currentShareLink}`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+}
+
 function loadEvent() {
   if (!eventId) {
     document.getElementById("event-title").innerText = "Link invalid. Lipsește evenimentul.";
     return;
   }
+
+  currentShareLink = `${window.location.origin}${window.location.pathname}?event=${eventId}`;
+  document.getElementById("guestLinkBox").innerHTML =
+    `<a href="${currentShareLink}" target="_blank">${currentShareLink}</a>`;
+  renderGuestQr(currentShareLink);
 
   db.collection("events")
     .doc(eventId)
@@ -106,7 +143,6 @@ function loadEvent() {
 
       const eventData = doc.data();
       isEventFinalized = !!eventData.isFinalized;
-      currentUnit = eventData.unit || "mg/L";
 
       document.getElementById("event-title").innerText = `Eveniment: ${eventData.name}`;
       applyTheme(eventData.theme || "party");
@@ -137,12 +173,12 @@ function submitData() {
   }
 
   if (!name || alcoholValue === "" || isNaN(alcohol)) {
-    alert(`Completează toate câmpurile (${currentUnit}).`);
+    alert("Completează toate câmpurile.");
     return;
   }
 
   if (alcohol < 0 || alcohol > 5) {
-    alert(`Introdu o valoare validă pentru alcoolemie (${currentUnit}).`);
+    alert("Introdu o valoare validă pentru alcoolemie.");
     return;
   }
 
@@ -165,7 +201,7 @@ function submitData() {
           updatedAt: Date.now()
         }).then(() => {
           lastUpdatedId = entryId;
-          status.innerText = `Valoarea a fost actualizată (${currentUnit}).`;
+          status.innerText = "Alcoolemia a fost actualizată pentru acest nume.";
           document.getElementById("name").value = "";
           document.getElementById("alcohol").value = "";
         });
@@ -178,7 +214,7 @@ function submitData() {
         updatedAt: Date.now()
       }).then(() => {
         lastUpdatedId = entryId;
-        status.innerText = `Rezultatul a fost adăugat (${currentUnit}).`;
+        status.innerText = "Rezultatul a fost adăugat.";
         document.getElementById("name").value = "";
         document.getElementById("alcohol").value = "";
       });
@@ -225,7 +261,7 @@ function showNewRecordHighlight(newMax) {
   const badge = document.getElementById("recordBadge");
   const maxBox = document.querySelector(".max-box");
 
-  badge.innerText = `🔥 Record nou: ${formatWithUnit(newMax)}`;
+  badge.innerText = `🔥 Record nou: ${formatAlcohol(newMax)}`;
   badge.classList.remove("hidden");
   badge.classList.add("show-record");
 
@@ -287,8 +323,8 @@ function updateStats(entries) {
   const avg = count ? total / count : 0;
 
   document.getElementById("statCount").innerText = count;
-  document.getElementById("statAvg").innerText = formatWithUnit(avg);
-  document.getElementById("statMax").innerText = formatWithUnit(max);
+  document.getElementById("statAvg").innerText = avg.toFixed(2);
+  document.getElementById("statMax").innerText = max.toFixed(2);
 
   if (previousMaxAlcohol !== null && max > previousMaxAlcohol) {
     showNewRecordHighlight(max);
@@ -362,7 +398,7 @@ function renderGuestRanking(entries) {
         <strong>${escapeHtml(item.person.name)}</strong>
         <div class="fun-title">${getTitle(item.person.alcohol)}</div>
       </div>
-      <div class="score"><strong>${formatWithUnit(item.person.alcohol)}</strong></div>
+      <div class="score"><strong>${formatAlcohol(item.person.alcohol)}</strong></div>
     `;
     podium.appendChild(card);
   });
@@ -380,7 +416,7 @@ function renderGuestRanking(entries) {
         <span class="rank-number">${idx + 4}.</span>
         <span>${escapeHtml(item.name)}</span>
         <div class="fun-title">${getTitle(item.alcohol)}</div>
-        <span class="normal-score">${formatWithUnit(item.alcohol)}</span>
+        <span class="normal-score">${formatAlcohol(item.alcohol)}</span>
       </div>
     `;
     restList.appendChild(li);
@@ -392,5 +428,7 @@ function renderGuestRanking(entries) {
 
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("submitBtn").addEventListener("click", submitData);
+  document.getElementById("copyGuestEventLinkBtn").addEventListener("click", copyGuestEventLink);
+  document.getElementById("shareGuestWhatsappBtn").addEventListener("click", shareGuestOnWhatsApp);
   loadEvent();
 });
