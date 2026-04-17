@@ -151,13 +151,49 @@ function createEvent() {
     });
 }
 
+function createEventRow(item) {
+  const row = document.createElement("div");
+  row.className = "event-row-card";
+  if (currentAdminEventId === item.id) {
+    row.classList.add("selected-event");
+  }
+
+  const info = document.createElement("div");
+  info.className = "event-row-info";
+  info.innerHTML = `
+    <strong>${escapeHtml(item.name || item.id)}</strong>
+    <span>${escapeHtml(item.id)}</span>
+    <span>Tema: ${escapeHtml(item.theme || "party")}</span>
+    <span>Status: ${item.isFinalized ? "Finalizat" : "Activ"}</span>
+  `;
+  info.addEventListener("click", () => selectEvent(item.id));
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.className = "trash-btn event-inline-delete";
+  deleteBtn.innerHTML = "🗑️";
+  deleteBtn.title = "Șterge evenimentul";
+  deleteBtn.setAttribute("aria-label", "Șterge evenimentul");
+  deleteBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    deleteEvent(item.id, item.name || item.id);
+  });
+
+  row.appendChild(info);
+  row.appendChild(deleteBtn);
+
+  return row;
+}
+
 function listenToEvents() {
   if (unsubscribeEvents) unsubscribeEvents();
 
   unsubscribeEvents = db.collection("events").onSnapshot(
     (snapshot) => {
-      const list = document.getElementById("eventsList");
-      list.innerHTML = "";
+      const activeList = document.getElementById("activeEventsList");
+      const finishedList = document.getElementById("finishedEventsList");
+
+      activeList.innerHTML = "";
+      finishedList.innerHTML = "";
 
       const events = [];
       snapshot.forEach((doc) => {
@@ -166,42 +202,24 @@ function listenToEvents() {
 
       events.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
-      if (!events.length) {
-        list.innerHTML = '<div class="muted">Nu există încă evenimente.</div>';
-        return;
+      const activeEvents = events.filter((item) => !item.isFinalized);
+      const finishedEvents = events.filter((item) => !!item.isFinalized);
+
+      if (!activeEvents.length) {
+        activeList.innerHTML = '<div class="muted">Nu există evenimente active.</div>';
+      } else {
+        activeEvents.forEach((item) => {
+          activeList.appendChild(createEventRow(item));
+        });
       }
 
-      events.forEach((item) => {
-        const row = document.createElement("div");
-        row.className = "event-row-card";
-        if (currentAdminEventId === item.id) {
-          row.classList.add("selected-event");
-        }
-
-        const info = document.createElement("div");
-        info.className = "event-row-info";
-        info.innerHTML = `
-          <strong>${escapeHtml(item.name || item.id)}</strong>
-          <span>${escapeHtml(item.id)}</span>
-          <span>Tema: ${escapeHtml(item.theme || "party")}</span>
-          <span>Status: ${item.isFinalized ? "Finalizat" : "Activ"}</span>
-        `;
-        info.addEventListener("click", () => selectEvent(item.id));
-
-        const deleteBtn = document.createElement("button");
-        deleteBtn.className = "trash-btn event-inline-delete";
-        deleteBtn.innerHTML = "🗑️";
-        deleteBtn.title = "Șterge evenimentul";
-        deleteBtn.setAttribute("aria-label", "Șterge evenimentul");
-        deleteBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          deleteEvent(item.id, item.name || item.id);
+      if (!finishedEvents.length) {
+        finishedList.innerHTML = '<div class="muted">Nu există evenimente finalizate.</div>';
+      } else {
+        finishedEvents.forEach((item) => {
+          finishedList.appendChild(createEventRow(item));
         });
-
-        row.appendChild(info);
-        row.appendChild(deleteBtn);
-        list.appendChild(row);
-      });
+      }
     },
     (error) => {
       console.error("listenToEvents error:", error);
