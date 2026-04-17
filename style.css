@@ -1039,3 +1039,49 @@ a:hover {
     justify-content: center;
   }
 }
+.share-card {
+  overflow: hidden;
+}
+
+.share-grid {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 18px;
+  align-items: center;
+}
+
+.guest-qr-box {
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 20px;
+  padding: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#guestQrcode {
+  background: white;
+  padding: 10px;
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+  min-width: 180px;
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.share-actions .link-box {
+  margin-bottom: 14px;
+}
+
+@media (max-width: 760px) {
+  .share-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .guest-qr-box {
+    justify-content: center;
+  }
+}

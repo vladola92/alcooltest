@@ -24,6 +24,7 @@ let leaderBadgeTimeout = null;
 let lastUpdatedId = null;
 let isEventFinalized = false;
 let currentShareLink = "";
+let leaderboardSubscribed = false;
 
 function slugify(text) {
   return text
@@ -88,28 +89,20 @@ function updateGuestAvailability() {
 
 function renderGuestQr(link) {
   const qrBox = document.getElementById("guestQrcode");
+  if (!qrBox) return;
+
   qrBox.innerHTML = "";
+
+  if (typeof QRCode === "undefined") {
+    qrBox.innerHTML = "<div class='muted'>QR indisponibil</div>";
+    return;
+  }
 
   new QRCode(qrBox, {
     text: link,
     width: 160,
     height: 160
   });
-}
-
-function copyGuestEventLink() {
-  if (!currentShareLink) {
-    alert("Linkul nu este încă disponibil.");
-    return;
-  }
-
-  navigator.clipboard.writeText(currentShareLink)
-    .then(() => {
-      alert("Link copiat.");
-    })
-    .catch(() => {
-      alert("Nu am putut copia linkul.");
-    });
 }
 
 function shareGuestOnWhatsApp() {
@@ -129,8 +122,12 @@ function loadEvent() {
   }
 
   currentShareLink = `${window.location.origin}${window.location.pathname}?event=${eventId}`;
-  document.getElementById("guestLinkBox").innerHTML =
-    `<a href="${currentShareLink}" target="_blank">${currentShareLink}</a>`;
+
+  const guestLinkBox = document.getElementById("guestLinkBox");
+  if (guestLinkBox) {
+    guestLinkBox.innerHTML = `<a href="${currentShareLink}" target="_blank">${currentShareLink}</a>`;
+  }
+
   renderGuestQr(currentShareLink);
 
   db.collection("events")
@@ -147,14 +144,15 @@ function loadEvent() {
       document.getElementById("event-title").innerText = `Eveniment: ${eventData.name}`;
       applyTheme(eventData.theme || "party");
       updateGuestAvailability();
-      listenToLeaderboard();
+
+      if (!leaderboardSubscribed) {
+        listenToLeaderboard();
+      }
     }, (error) => {
       console.error(error);
       document.getElementById("event-title").innerText = "Eroare la încărcarea evenimentului.";
     });
 }
-
-let leaderboardSubscribed = false;
 
 function submitData() {
   const name = document.getElementById("name").value.trim();
@@ -226,7 +224,6 @@ function submitData() {
 }
 
 function listenToLeaderboard() {
-  if (leaderboardSubscribed) return;
   leaderboardSubscribed = true;
 
   db.collection("events")
@@ -428,7 +425,6 @@ function renderGuestRanking(entries) {
 
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("submitBtn").addEventListener("click", submitData);
-  document.getElementById("copyGuestEventLinkBtn").addEventListener("click", copyGuestEventLink);
   document.getElementById("shareGuestWhatsappBtn").addEventListener("click", shareGuestOnWhatsApp);
   loadEvent();
 });
