@@ -34,6 +34,24 @@ function slugify(text) {
     .replace(/^-+|-+$/g, "");
 }
 
+function stripDiacritics(text) {
+  return String(text || "")
+    .replace(/ă/g, "a")
+    .replace(/â/g, "a")
+    .replace(/î/g, "i")
+    .replace(/ș/g, "s")
+    .replace(/ş/g, "s")
+    .replace(/ț/g, "t")
+    .replace(/ţ/g, "t")
+    .replace(/Ă/g, "A")
+    .replace(/Â/g, "A")
+    .replace(/Î/g, "I")
+    .replace(/Ș/g, "S")
+    .replace(/Ş/g, "S")
+    .replace(/Ț/g, "T")
+    .replace(/Ţ/g, "T");
+}
+
 function makeEventId(name) {
   const slug = slugify(name);
   const randomPart = Math.floor(Math.random() * 9000) + 1000;
@@ -103,7 +121,7 @@ function createEvent() {
     return;
   }
 
-  message.innerText = "Se creează evenimentul...";
+  message.innerText = "Se creeaza evenimentul...";
 
   const eventId = makeEventId(eventName);
 
@@ -144,7 +162,7 @@ function listenToEvents() {
       events.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
       if (!events.length) {
-        list.innerHTML = '<div class="muted">Nu există încă evenimente.</div>';
+        list.innerHTML = '<div class="muted">Nu exista inca evenimente.</div>';
         return;
       }
 
@@ -168,8 +186,8 @@ function listenToEvents() {
         const deleteBtn = document.createElement("button");
         deleteBtn.className = "trash-btn event-inline-delete";
         deleteBtn.innerHTML = "🗑️";
-        deleteBtn.title = "Șterge evenimentul";
-        deleteBtn.setAttribute("aria-label", "Șterge evenimentul");
+        deleteBtn.title = "Sterge evenimentul";
+        deleteBtn.setAttribute("aria-label", "Sterge evenimentul");
         deleteBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           deleteEvent(item.id, item.name || item.id);
@@ -214,7 +232,7 @@ function selectEvent(eventId) {
 
       document.getElementById("toggleEventStatusBtn").innerText = data.isFinalized
         ? "Redeschide evenimentul"
-        : "Finalizează evenimentul";
+        : "Finalizeaza evenimentul";
 
       applyTheme(data.theme || "party");
       renderQr(currentGuestLink);
@@ -222,7 +240,7 @@ function selectEvent(eventId) {
       listenToEvents();
     })
     .catch((error) => {
-      alert("Eroare la încărcarea evenimentului: " + error.message);
+      alert("Eroare la incarcarea evenimentului: " + error.message);
       console.error("selectEvent error:", error);
     });
 }
@@ -274,7 +292,7 @@ function renderQr(text) {
 
 function copyGuestLink() {
   if (!currentGuestLink) {
-    alert("Selectează mai întâi un eveniment.");
+    alert("Selecteaza mai intai un eveniment.");
     return;
   }
 
@@ -289,11 +307,11 @@ function copyGuestLink() {
 
 function shareOnWhatsApp() {
   if (!currentGuestLink) {
-    alert("Selectează mai întâi un eveniment.");
+    alert("Selecteaza mai intai un eveniment.");
     return;
   }
 
-  const text = `Participă la clasamentul alcooltest: ${currentGuestLink}`;
+  const text = `Participa la clasamentul alcooltest: ${currentGuestLink}`;
   window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
 }
 
@@ -333,7 +351,7 @@ function drawRoundedRect(doc, x, y, w, h, r, style = "S") {
 
 function exportPdfReport() {
   if (!currentAdminEventId || !currentEventData) {
-    alert("Selectează un eveniment.");
+    alert("Selecteaza un eveniment.");
     return;
   }
 
@@ -359,18 +377,14 @@ function exportPdfReport() {
 
       // Header premium
       doc.setFillColor(34, 24, 72);
-      drawRoundedRect(doc, 12, 10, pageWidth - 24, 28, 6, "F");
+      drawRoundedRect(doc, 12, 10, pageWidth - 24, 24, 6, "F");
 
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(20);
-      doc.text("RAPORT ALCOOLTEST", left + 4, 22);
+      doc.text("RAPORT ALCOOLTEST", left + 4, 25);
 
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.text("Rezumat elegant al evenimentului", left + 4, 29);
-
-      y = 48;
+      y = 44;
 
       // Event info
       doc.setTextColor(30, 30, 30);
@@ -385,15 +399,15 @@ function exportPdfReport() {
       y += 8;
       doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
-      doc.text(`Nume: ${currentEventData.name || "-"}`, left, y);
+      doc.text(`Nume: ${stripDiacritics(currentEventData.name || "-")}`, left, y);
       y += 7;
-      doc.text(`Cod: ${currentAdminEventId}`, left, y);
+      doc.text(`Cod: ${stripDiacritics(currentAdminEventId)}`, left, y);
       y += 7;
-      doc.text(`Tema: ${currentEventData.theme || "party"}`, left, y);
+      doc.text(`Tema: ${stripDiacritics(currentEventData.theme || "party")}`, left, y);
       y += 7;
       doc.text(`Status: ${currentEventData.isFinalized ? "Finalizat" : "Activ"}`, left, y);
       y += 7;
-      doc.text(`Data export: ${new Date().toLocaleString("ro-RO")}`, left, y);
+      doc.text(`Data export: ${stripDiacritics(new Date().toLocaleString("ro-RO"))}`, left, y);
 
       // Stats box
       y += 12;
@@ -407,7 +421,7 @@ function exportPdfReport() {
 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
-      doc.text(`Participanți: ${totalParticipants}`, left + 5, y + 17);
+      doc.text(`Participanti: ${totalParticipants}`, left + 5, y + 17);
       doc.text(`Media alcoolemiei: ${formatAlcohol(avgAlcohol)}`, left + 62, y + 17);
       doc.text(`Scor maxim: ${formatAlcohol(maxAlcohol)}`, left + 140, y + 17);
 
@@ -447,7 +461,7 @@ function exportPdfReport() {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(10);
 
-        const podiumName = item.person ? item.person.name : "-";
+        const podiumName = item.person ? stripDiacritics(item.person.name) : "-";
         const podiumScore = item.person ? formatAlcohol(item.person.alcohol) : "-";
 
         doc.text(podiumName, item.x + 4, yBox + 18, { maxWidth: boxWidth - 8 });
@@ -467,7 +481,7 @@ function exportPdfReport() {
       if (!entries.length) {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(11);
-        doc.text("Nu există participanți.", left, y);
+        doc.text("Nu exista participanti.", left, y);
       } else {
         entries.forEach((entry, index) => {
           if (y > pageHeight - 18) {
@@ -491,7 +505,7 @@ function exportPdfReport() {
           doc.setFont("helvetica", "normal");
           doc.setFontSize(11);
           doc.text(`${index + 1}.`, left, y + 8);
-          doc.text(entry.name, left + 12, y + 8, { maxWidth: 120 });
+          doc.text(stripDiacritics(entry.name), left + 12, y + 8, { maxWidth: 120 });
           doc.text(formatAlcohol(entry.alcohol), right - 18, y + 8, { align: "right" });
 
           y += 12;
@@ -524,7 +538,7 @@ function exportPdfReport() {
 
 function saveEventChanges() {
   if (!currentAdminEventId) {
-    alert("Selectează un eveniment.");
+    alert("Selecteaza un eveniment.");
     return;
   }
 
@@ -555,7 +569,7 @@ function saveEventChanges() {
 
 function toggleEventStatus() {
   if (!currentAdminEventId || !currentEventData) {
-    alert("Selectează un eveniment.");
+    alert("Selecteaza un eveniment.");
     return;
   }
 
@@ -584,7 +598,7 @@ function renderAdminRanking(entries) {
   restList.innerHTML = "";
 
   if (!entries.length) {
-    podium.innerHTML = '<div class="podium-empty">Nu există încă rezultate.</div>';
+    podium.innerHTML = '<div class="podium-empty">Selecteaza un eveniment</div>';
     return;
   }
 
@@ -614,7 +628,7 @@ function renderAdminRanking(entries) {
       <div class="place">${item.medal}</div>
       <div class="name"><strong>${escapeHtml(item.person.name)}</strong></div>
       <div class="score"><strong>${formatAlcohol(item.person.alcohol)}</strong></div>
-      <button class="trash-btn" title="Șterge" aria-label="Șterge">🗑️</button>
+      <button class="trash-btn" title="Sterge" aria-label="Sterge">🗑️</button>
     `;
 
     card.querySelector(".trash-btn").addEventListener("click", () => deleteEntry(item.person.id));
@@ -630,7 +644,7 @@ function renderAdminRanking(entries) {
         <span>${escapeHtml(item.name)}</span>
         <span class="normal-score">${formatAlcohol(item.alcohol)}</span>
       </div>
-      <button class="trash-btn" title="Șterge" aria-label="Șterge">🗑️</button>
+      <button class="trash-btn" title="Sterge" aria-label="Sterge">🗑️</button>
     `;
     li.querySelector(".trash-btn").addEventListener("click", () => deleteEntry(item.id));
     restList.appendChild(li);
@@ -639,7 +653,7 @@ function renderAdminRanking(entries) {
 
 function deleteEntry(entryId) {
   if (!currentAdminEventId) {
-    alert("Selectează un eveniment.");
+    alert("Selecteaza un eveniment.");
     return;
   }
 
@@ -649,13 +663,13 @@ function deleteEntry(entryId) {
     .doc(entryId)
     .delete()
     .catch((error) => {
-      alert("Eroare la ștergere: " + error.message);
+      alert("Eroare la stergere: " + error.message);
       console.error("deleteEntry error:", error);
     });
 }
 
 function deleteEvent(eventId, eventName) {
-  const ok = confirm(`Sigur vrei să ștergi evenimentul "${eventName}"?`);
+  const ok = confirm(`Sigur vrei sa stergi evenimentul "${eventName}"?`);
   if (!ok) return;
 
   db.collection("events")
@@ -686,27 +700,27 @@ function deleteEvent(eventId, eventName) {
         document.getElementById("editEventName").value = "";
         document.getElementById("editEventTheme").value = "party";
         document.getElementById("adminPodium").innerHTML =
-          '<div class="podium-empty">Selectează un eveniment</div>';
+          '<div class="podium-empty">Selecteaza un eveniment</div>';
         document.getElementById("adminRestList").innerHTML = "";
         document.getElementById("qrcode").innerHTML = "";
       }
 
-      alert("Evenimentul a fost șters.");
+      alert("Evenimentul a fost sters.");
       listenToEvents();
     })
     .catch((error) => {
       console.error("deleteEvent error:", error);
-      alert("Eroare la ștergerea evenimentului: " + error.message);
+      alert("Eroare la stergerea evenimentului: " + error.message);
     });
 }
 
 function resetLeaderboard() {
   if (!currentAdminEventId) {
-    alert("Selectează un eveniment.");
+    alert("Selecteaza un eveniment.");
     return;
   }
 
-  const ok = confirm("Sigur vrei să resetezi clasamentul?");
+  const ok = confirm("Sigur vrei sa resetezi clasamentul?");
   if (!ok) return;
 
   db.collection("events")
